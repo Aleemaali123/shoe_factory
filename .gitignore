@@ -57,3 +57,4 @@ backend/data/
 # Admin web
 node_modules/
 apps/admin/dist/
+apps/admin/.vite/
