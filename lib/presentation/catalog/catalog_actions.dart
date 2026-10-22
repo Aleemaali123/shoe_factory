@@ -17,6 +17,10 @@ void openProduct(BuildContext context, String productId) {
 
 Future<void> quickAdd(BuildContext context, Product product) async {
   final deps = Shop.of(context);
+  if (product.sizes.isEmpty || product.colors.isEmpty) {
+    showShopMessage(context, 'This pair is missing a size or colour.');
+    return;
+  }
   final result = await deps.cart.add(
     product,
     size: product.sizes.contains(8) ? 8 : product.sizes.first,
@@ -37,7 +41,10 @@ Widget catalogCard(BuildContext context, Product product) {
     product: product,
     wished: deps.wishlist.contains(product.id),
     onTap: () => openProduct(context, product.id),
-    onWish: () => deps.wishlist.toggle(product.id),
+    onWish: () async {
+      final message = await deps.wishlist.toggle(product.id);
+      if (message != null && context.mounted) showShopMessage(context, message);
+    },
     onAdd: () {
       quickAdd(context, product);
     },

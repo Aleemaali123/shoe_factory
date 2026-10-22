@@ -98,11 +98,15 @@ export type Coupon = {
   active: boolean
 }
 
+export type NoticeKind = 'info' | 'offer' | 'product' | 'order'
+
 export type Notice = {
   id: string
   title: string
   body: string
   timeLabel: string
+  kind: NoticeKind
+  targetId: string
 }
 
 export type AdminData = {

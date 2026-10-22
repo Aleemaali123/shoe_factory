@@ -1,4 +1,5 @@
 import '../../domain/entities/shop_models.dart';
+import '../../domain/pricing/pricing.dart';
 
 Product productFromJson(Map<String, dynamic> json) {
   return Product(
@@ -114,6 +115,21 @@ ShopNotice noticeFromJson(Map<String, dynamic> json) {
     body: json['body'] as String,
     timeLabel: json['timeLabel'] as String,
     read: json['read'] as bool? ?? false,
+    kind: (json['kind'] as String?)?.trim().isNotEmpty == true
+        ? json['kind'] as String
+        : 'info',
+    targetId: (json['targetId'] as String?) ?? '',
+  );
+}
+
+Coupon couponFromJson(Map<String, dynamic> json) {
+  return Coupon(
+    code: json['code'] as String,
+    label: (json['label'] as String?) ?? json['code'] as String,
+    percent: (json['percent'] as num?)?.toDouble() ?? 0,
+    flatOff: (json['flatOff'] as num?)?.toDouble() ?? 0,
+    freeShipping: json['freeShipping'] as bool? ?? false,
+    minSubtotal: (json['minSubtotal'] as num?)?.toDouble() ?? 0,
   );
 }
 

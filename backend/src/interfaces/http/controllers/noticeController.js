@@ -8,5 +8,11 @@ export function noticeController(noticeService) {
     markAllRead: asyncHandler(async (req, res) => {
       res.json({ data: noticeService.markAllRead(req.device) });
     }),
+    markRead: asyncHandler(async (req, res) => {
+      res.json({ data: noticeService.markRead(req.device, req.params.id) });
+    }),
+    dismiss: asyncHandler(async (req, res) => {
+      res.json({ data: noticeService.dismiss(req.device, req.params.id) });
+    }),
   };
 }

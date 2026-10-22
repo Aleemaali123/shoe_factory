@@ -3,9 +3,10 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class ApiException implements Exception {
-  ApiException(this.message);
+  ApiException(this.message, {this.statusCode});
 
   final String message;
+  final int? statusCode;
 
   @override
   String toString() => message;
@@ -56,7 +57,7 @@ class ApiClient {
       final message = raw is Map && raw['error'] is String
           ? raw['error'] as String
           : 'Something went wrong. Try again.';
-      throw ApiException(message);
+      throw ApiException(message, statusCode: response.statusCode);
     }
     if (raw is Map && raw.containsKey('data')) return raw['data'];
     return raw;

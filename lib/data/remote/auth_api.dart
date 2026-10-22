@@ -56,13 +56,21 @@ class AuthApi {
     }));
   }
 
+  Future<Map<String, dynamic>> requestPasswordReset(String email) async {
+    return asMap(await _api.post('/api/auth/password/reset/request', {
+      'email': email,
+    }));
+  }
+
   Future<void> resetPassword({
     required String email,
+    required String code,
     required String password,
     required String confirmPassword,
   }) async {
     await _api.post('/api/auth/password/reset', {
       'email': email,
+      'code': code,
       'password': password,
       'confirmPassword': confirmPassword,
     });

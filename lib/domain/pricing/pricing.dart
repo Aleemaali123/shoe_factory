@@ -47,19 +47,25 @@ class Pricing {
   static const freeDeliveryThreshold = 4999.0;
   static const standardDelivery = 49.0;
 
-  static const coupons = <Coupon>[
-    Coupon(code: 'TREND10', label: '10% off', percent: 10),
-    Coupon(
+  static final List<Coupon> _defaults = <Coupon>[
+    const Coupon(code: 'TREND10', label: '10% off', percent: 10),
+    const Coupon(
         code: 'FACTORY200',
         label: '₹200 off above ₹1,999',
         flatOff: 200,
         minSubtotal: 1999),
-    Coupon(
+    const Coupon(
         code: 'FREESHIP',
         label: 'Free delivery above ₹999',
         freeShipping: true,
         minSubtotal: 999),
   ];
+
+  static List<Coupon> coupons = List<Coupon>.of(_defaults);
+
+  static void replaceCoupons(List<Coupon> next) {
+    coupons = List<Coupon>.of(next);
+  }
 
   static Coupon? find(String? code) {
     if (code == null || code.trim().isEmpty) return null;
@@ -113,10 +119,12 @@ class Pricing {
     }
     final coupon = find(code);
     if (coupon == null) {
+      final known = coupons.map((coupon) => coupon.code).join(', ');
       return CouponAttempt(
         accepted: false,
-        message:
-            'That code is not recognised. Try TREND10, FACTORY200 or FREESHIP.',
+        message: known.isEmpty
+            ? 'That code is not recognised.'
+            : 'That code is not recognised. Try $known.',
         quote: plain,
       );
     }

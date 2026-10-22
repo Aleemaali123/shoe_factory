@@ -320,6 +320,8 @@ class ShopNotice {
     required this.body,
     required this.timeLabel,
     this.read = false,
+    this.kind = 'info',
+    this.targetId = '',
   });
 
   final String id;
@@ -327,13 +329,25 @@ class ShopNotice {
   final String body;
   final String timeLabel;
   final bool read;
+  final String kind;
+  final String targetId;
 
-  ShopNotice copyWith({bool? read}) {
+  ShopNotice copyWith({
+    bool? read,
+    String? title,
+    String? body,
+    String? timeLabel,
+    String? kind,
+    String? targetId,
+  }) {
     return ShopNotice(
-        id: id,
-        title: title,
-        body: body,
-        timeLabel: timeLabel,
-        read: read ?? this.read);
+      id: id,
+      title: title ?? this.title,
+      body: body ?? this.body,
+      timeLabel: timeLabel ?? this.timeLabel,
+      read: read ?? this.read,
+      kind: kind ?? this.kind,
+      targetId: targetId ?? this.targetId,
+    );
   }
 }

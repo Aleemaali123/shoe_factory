@@ -29,6 +29,7 @@ class CheckoutApi {
     required String contactPhone,
     required String destination,
     String? paymentReference,
+    String? branchId,
   }) async {
     final data = asMap(await _api.post('/api/checkout', {
       'fulfilment': fulfilment,
@@ -37,6 +38,7 @@ class CheckoutApi {
       'contactPhone': contactPhone,
       'destination': destination,
       'paymentReference': paymentReference,
+      'branchId': branchId,
     }));
     return orderFromJson(data);
   }

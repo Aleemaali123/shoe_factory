@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 
 import '../../core/location/device_location.dart';
 import '../../core/network/api_client.dart';
+import '../../core/storage/session_store.dart';
 import '../../domain/entities/shop_models.dart';
 import '../../domain/gateways/shop_gateways.dart';
 import '../../domain/pricing/pricing.dart';
@@ -45,8 +46,11 @@ class BranchViewModel extends ChangeNotifier {
 
   void select(String id) {
     _branches.select(id);
+    SessionStore.saveBranch(id);
     notifyListeners();
   }
+
+  void sync() => notifyListeners();
 }
 
 class LocationViewModel extends ChangeNotifier {
@@ -156,13 +160,22 @@ class SessionViewModel extends ChangeNotifier {
     return error;
   }
 
+  Future<OtpRequest> requestPasswordReset(String email) {
+    return _account.requestPasswordReset(email);
+  }
+
   Future<String?> resetPassword({
     required String email,
+    required String code,
     required String password,
     required String confirmPassword,
   }) {
     return _account.resetPassword(
-        email: email, password: password, confirmPassword: confirmPassword);
+      email: email,
+      code: code,
+      password: password,
+      confirmPassword: confirmPassword,
+    );
   }
 
   Future<void> signOut() async {
@@ -275,33 +288,59 @@ class CartViewModel extends ChangeNotifier {
 
   Future<AddToCartResult> add(Product product,
       {required int size, required String color, int quantity = 1}) async {
-    final result = await _cart.add(product,
-        size: size, color: color, quantity: quantity);
-    notifyListeners();
-    return result;
+    try {
+      final result = await _cart.add(product,
+          size: size, color: color, quantity: quantity);
+      notifyListeners();
+      return result;
+    } on ApiException catch (error) {
+      return AddToCartResult(added: false, message: error.message);
+    }
   }
 
   Future<void> setQuantity(String lineId, int quantity) async {
-    await _cart.setQuantity(lineId, quantity);
-    notifyListeners();
+    try {
+      await _cart.setQuantity(lineId, quantity);
+      notifyListeners();
+    } on ApiException catch (error) {
+      couponMessage = error.message;
+      couponAccepted = false;
+      notifyListeners();
+    }
   }
 
   Future<void> remove(String lineId) async {
-    await _cart.remove(lineId);
-    notifyListeners();
+    try {
+      await _cart.remove(lineId);
+      notifyListeners();
+    } on ApiException catch (error) {
+      couponMessage = error.message;
+      couponAccepted = false;
+      notifyListeners();
+    }
   }
 
   Future<void> applyCoupon(String code, {required bool pickup}) async {
-    final result = await _cart.applyCoupon(code, pickup: pickup);
-    couponMessage = result.message;
-    couponAccepted = result.accepted;
+    try {
+      final result = await _cart.applyCoupon(code, pickup: pickup);
+      couponMessage = result.message;
+      couponAccepted = result.accepted;
+    } on ApiException catch (error) {
+      couponMessage = error.message;
+      couponAccepted = false;
+    }
     notifyListeners();
   }
 
   Future<void> clearCoupon() async {
-    await _cart.clearCoupon();
-    couponMessage = 'Coupon removed.';
-    couponAccepted = false;
+    try {
+      await _cart.clearCoupon();
+      couponMessage = 'Coupon removed.';
+      couponAccepted = false;
+    } on ApiException catch (error) {
+      couponMessage = error.message;
+      couponAccepted = false;
+    }
     notifyListeners();
   }
 
@@ -330,9 +369,14 @@ class WishlistViewModel extends ChangeNotifier {
 
   bool contains(String id) => _wishlist.contains(id);
 
-  Future<void> toggle(String id) async {
-    await _wishlist.toggle(id);
-    notifyListeners();
+  Future<String?> toggle(String id) async {
+    try {
+      await _wishlist.toggle(id);
+      notifyListeners();
+      return null;
+    } on ApiException catch (error) {
+      return error.message;
+    }
   }
 }
 
@@ -346,12 +390,24 @@ class OrdersViewModel extends ChangeNotifier {
   ShopOrder? byId(String id) => _orders.byId(id);
 
   Future<bool> cancel(String id) async {
-    final changed = await _orders.cancel(id);
-    if (changed) notifyListeners();
-    return changed;
+    try {
+      final changed = await _orders.cancel(id);
+      if (changed) notifyListeners();
+      return changed;
+    } on ApiException {
+      return false;
+    }
   }
 
-  Future<int> reorder(ShopOrder order) => _orders.reorder(order);
+  Future<int> reorder(ShopOrder order) async {
+    try {
+      final units = await _orders.reorder(order);
+      notifyListeners();
+      return units;
+    } on ApiException {
+      return 0;
+    }
+  }
 
   void sync() => notifyListeners();
 }
@@ -369,6 +425,36 @@ class NoticesViewModel extends ChangeNotifier {
     await _notices.markAllRead();
     notifyListeners();
   }
+
+  Future<void> markRead(String id) async {
+    ShopNotice? current;
+    for (final notice in notices) {
+      if (notice.id == id) current = notice;
+    }
+    if (current == null || current.read) return;
+    await _notices.markRead(id);
+    notifyListeners();
+  }
+
+  Future<void> dismiss(String id) async {
+    try {
+      await _notices.dismiss(id);
+    } on ApiException {
+      await _notices.refresh();
+    }
+    notifyListeners();
+  }
+
+  Future<void> refresh() async {
+    try {
+      await _notices.refresh();
+    } on ApiException {
+      return;
+    }
+    notifyListeners();
+  }
+
+  void sync() => notifyListeners();
 }
 
 class ProductDetailViewModel extends ChangeNotifier {
@@ -618,8 +704,15 @@ class CheckoutViewModel extends ChangeNotifier {
         notifyListeners();
         return null;
       }
-      contactName = user?.name.isNotEmpty == true ? user!.name : 'Store pickup';
-      contactPhone = user?.phone ?? '';
+      final pickupPhone = phone.trim().isNotEmpty ? phone : (user?.phone ?? '');
+      if (pickupPhone.replaceAll(RegExp(r'\D'), '').length != 10) {
+        error = 'Enter a 10-digit phone number.';
+        notifyListeners();
+        return null;
+      }
+      final pickupName = user?.name.isNotEmpty == true ? user!.name : name.trim();
+      contactName = pickupName.length < 2 ? 'Store pickup' : pickupName;
+      contactPhone = pickupPhone.replaceAll(RegExp(r'\D'), '');
       destination = '${branch.name}, ${branch.address}';
     } else if (!useNewAddress && selectedAddressId != null) {
       Address? address;
@@ -669,8 +762,16 @@ class CheckoutViewModel extends ChangeNotifier {
       {String? paymentReference}) async {
     if (_placed) return null;
     if (contact.saveAddress) {
+      Address? existing;
+      for (final address in _account.addresses) {
+        if (address.line.trim() == (contact.line ?? '').trim() &&
+            address.pincode == (contact.pincode ?? '').trim()) {
+          existing = address;
+        }
+      }
       await _account.saveAddress(
-        label: 'Home',
+        id: existing?.id,
+        label: existing == null || existing.label.isEmpty ? 'Home' : existing.label,
         name: contact.name,
         phone: contact.phone,
         line: contact.line ?? '',
@@ -688,6 +789,7 @@ class CheckoutViewModel extends ChangeNotifier {
         contactPhone: contact.phone,
         destination: contact.destination,
         paymentReference: paymentReference,
+        branchId: isPickup ? pickupBranchId : null,
       );
       _placed = true;
       return order;

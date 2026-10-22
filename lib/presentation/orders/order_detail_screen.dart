@@ -284,6 +284,8 @@ class OrderDetailScreen extends StatelessWidget {
     if (confirmed != true || !context.mounted) return;
     final cancelled = await Shop.of(context).orders.cancel(id);
     if (!context.mounted) return;
+    await Shop.of(context).notices.refresh();
+    if (!context.mounted) return;
     showShopMessage(
         context,
         cancelled

@@ -23,14 +23,17 @@ class BranchScreen extends StatelessWidget {
             decoration: BoxDecoration(
                 color: AppColors.paleGreen,
                 borderRadius: BorderRadius.circular(20)),
-            child: const Column(
+            child: Column(
               children: [
-                Icon(Icons.storefront, size: 40, color: AppColors.deepGreen),
-                SizedBox(height: 8),
-                Text('Three Shoe Factory stores',
-                    style: TextStyle(fontWeight: FontWeight.w900)),
-                SizedBox(height: 4),
+                const Icon(Icons.storefront, size: 40, color: AppColors.deepGreen),
+                const SizedBox(height: 8),
                 Text(
+                    branches.length == 1
+                        ? 'One Shoe Factory store'
+                        : '${branches.length} Shoe Factory stores',
+                    style: const TextStyle(fontWeight: FontWeight.w900)),
+                const SizedBox(height: 4),
+                const Text(
                   'Shop the same collection, or collect an order in store.',
                   textAlign: TextAlign.center,
                   style: TextStyle(color: AppColors.muted, fontSize: 12),

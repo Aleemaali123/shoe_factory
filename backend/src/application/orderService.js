@@ -1,5 +1,6 @@
 import { AppError } from '../domain/errors.js';
 import { calculate } from '../domain/pricing.js';
+import { orderUpdateNotice } from '../domain/notices.js';
 
 const cancellable = new Set(['confirmed', 'preparing']);
 
@@ -22,7 +23,9 @@ export function createOrderService(store, cartService) {
         subtotal,
         couponCode: device.cart.couponCode,
         pickup,
+        coupons: store.coupons(),
       });
+      store.adjustStock(items, -1);
       const order = {
         id: store.nextOrderId(),
         placedAt: new Date().toISOString(),
@@ -47,8 +50,11 @@ export function createOrderService(store, cartService) {
         contactPhone: String(input.contactPhone ?? ''),
         couponCode: quote.couponCode,
         paymentReference: input.paymentReference ?? null,
+        branchId: branchFor(store, input),
+        stockHeld: true,
       };
       device.orders.unshift(order);
+      store.pushNotice(device, orderUpdateNotice(order.id, 'confirmed'));
       cartService.clear(device);
       return order;
     },
@@ -56,7 +62,12 @@ export function createOrderService(store, cartService) {
     cancel(device, id) {
       const order = this.find(device, id);
       if (!order || !cancellable.has(order.status)) return { cancelled: false, order };
+      if (order.stockHeld) {
+        store.adjustStock(order.lines, 1);
+        order.stockHeld = false;
+      }
       order.status = 'cancelled';
+      store.pushNotice(device, orderUpdateNotice(order.id, 'cancelled'));
       store.save();
       return { cancelled: true, order };
     },
@@ -67,17 +78,33 @@ export function createOrderService(store, cartService) {
       let units = 0;
       for (const line of order.lines) {
         if (!store.product(line.productId)) continue;
+        const key = `${line.productId}|${line.size}|${line.color}`;
+        const before = device.cart.items.find((item) => item.id === key)?.quantity ?? 0;
         const result = cartService.add(device, {
           productId: line.productId,
           size: line.size,
           color: line.color,
           quantity: line.quantity,
         });
-        if (result.added) units += line.quantity;
+        const after = device.cart.items.find((item) => item.id === key)?.quantity ?? 0;
+        if (result.added) units += Math.max(0, after - before);
       }
       return { units, cart: resultCart(device) };
     },
   };
+}
+
+function branchFor(store, input) {
+  const requested = String(input.branchId ?? '').trim().toLowerCase();
+  const branches = store.branches();
+  if (requested && branches.some((branch) => branch.id === requested)) return requested;
+  if (input.fulfilment !== 'pickup') return '';
+  const destination = String(input.destination ?? '').toLowerCase();
+  const match = branches.find((branch) => (
+    destination.startsWith(branch.name.toLowerCase())
+    || destination.includes(branch.address.toLowerCase())
+  ));
+  return match?.id ?? '';
 }
 
 function resultCart(device) {

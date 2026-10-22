@@ -56,8 +56,10 @@ export function BranchesPage() {
           branch={editing}
           lockedId={Boolean(editing.id)}
           onClose={() => setEditing(null)}
-          onSave={(branch) => {
-            if (saveBranch(branch, !editing.id)) setEditing(null)
+          onSave={async (branch) => {
+            const problem = await saveBranch(branch, !editing.id)
+            if (!problem) setEditing(null)
+            return problem
           }}
         />
       ) : null}
@@ -74,18 +76,28 @@ function BranchForm({
   branch: Branch
   lockedId: boolean
   onClose: () => void
-  onSave: (branch: Branch) => void
+  onSave: (branch: Branch) => Promise<string | null>
 }) {
   const [draft, setDraft] = useState(branch)
   const [error, setError] = useState('')
 
-  function onSubmit(event: FormEvent) {
+  async function onSubmit(event: FormEvent) {
     event.preventDefault()
-    const id = (draft.id || draft.name.toLowerCase().replace(/[^a-z0-9]+/g, '').slice(0, 10)).trim().toLowerCase()
-    if (!draft.name.trim() || !id || !draft.address.trim() || !draft.phone.trim()) {
-      return setError('Add a name, address and phone number.')
-    }
-    onSave({ ...draft, id, name: draft.name.trim(), address: draft.address.trim(), phone: draft.phone.trim() })
+    const id = (draft.id || draft.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 24)).trim().toLowerCase()
+    if (draft.name.trim().length < 2) return setError('Enter the branch name.')
+    if (!/^[a-z0-9-]{2,24}$/.test(id)) return setError('Use 2–24 letters, numbers or hyphens for the id.')
+    if (draft.address.trim().length < 4) return setError('Enter the branch address.')
+    if (!draft.hours.trim()) return setError('Enter the opening hours.')
+    if (!draft.phone.trim()) return setError('Enter a phone number.')
+    const problem = await onSave({
+      ...draft,
+      id,
+      name: draft.name.trim(),
+      address: draft.address.trim(),
+      hours: draft.hours.trim(),
+      phone: draft.phone.trim(),
+    })
+    if (problem) setError(problem)
   }
 
   return (

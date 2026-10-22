@@ -18,7 +18,7 @@ const links = [
 ]
 
 export function Shell() {
-  const { data, flash, dismissFlash, resetDemo } = useStore()
+  const { data, error, flash, dismissFlash, resetDemo } = useStore()
   const { products, flash: productFlash, dismissFlash: dismissProductFlash } = useCatalog()
   const { name, phone, signOut } = useAuth()
   const navigate = useNavigate()
@@ -64,8 +64,8 @@ export function Shell() {
               {phone ? <span>+91 {phone}</span> : null}
             </NavLink>
           </p>
-          <button type="button" className="btn ghost" onClick={resetDemo}>
-            Restore demo data
+          <button type="button" className="btn ghost" onClick={() => void resetDemo()}>
+            Restore branches and offers
           </button>
           <button
             type="button"
@@ -86,6 +86,7 @@ export function Shell() {
           </button>
           <span className="who">{name}</span>
         </div>
+        {error ? <p className="banner">{error}</p> : null}
         {flash || productFlash ? (
           <div className="flash" role="status">
             <span>{productFlash || flash}</span>

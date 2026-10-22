@@ -11,7 +11,7 @@ export function CustomersPage() {
 
   return (
     <>
-      <PageHeader title="Customers" lede="Shoppers attached to the demo orders." />
+      <PageHeader title="Customers" lede="Shoppers who have an account, plus guests from orders." />
       <div className="table-wrap">
         <table>
           <thead>
@@ -56,9 +56,10 @@ export function CustomersPage() {
         <CustomerForm
           customer={editing}
           onClose={() => setEditing(null)}
-          onSave={(customer) => {
-            saveCustomer(customer)
-            setEditing(null)
+          onSave={async (customer) => {
+            const problem = await saveCustomer(customer)
+            if (!problem) setEditing(null)
+            return problem
           }}
         />
       ) : null}
@@ -73,16 +74,21 @@ function CustomerForm({
 }: {
   customer: Customer
   onClose: () => void
-  onSave: (customer: Customer) => void
+  onSave: (customer: Customer) => Promise<string | null>
 }) {
   const [draft, setDraft] = useState(customer)
   const [error, setError] = useState('')
 
-  function onSubmit(event: FormEvent) {
+  async function onSubmit(event: FormEvent) {
     event.preventDefault()
-    if (!draft.name.trim()) return setError('Enter a name.')
-    if (!draft.email.includes('@')) return setError('Enter an email.')
-    onSave({ ...draft, name: draft.name.trim(), email: draft.email.trim(), phone: draft.phone.trim(), city: draft.city.trim() })
+    const name = draft.name.trim()
+    const email = draft.email.trim()
+    const phone = draft.phone.replace(/\D/g, '')
+    if (name.length < 2) return setError('Enter a name.')
+    if (email && (!email.includes('@') || !email.includes('.'))) return setError('Enter a valid email.')
+    if (!/^[6-9]\d{9}$/.test(phone)) return setError('Enter a 10-digit mobile number.')
+    const problem = await onSave({ ...draft, name, email, phone, city: draft.city.trim() })
+    if (problem) setError(problem)
   }
 
   return (

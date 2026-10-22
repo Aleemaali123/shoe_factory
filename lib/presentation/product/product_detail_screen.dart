@@ -75,7 +75,13 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
             title: const Text('Product details'),
             actions: [
               IconButton(
-                onPressed: () => deps.wishlist.toggle(product.id),
+                onPressed: () {
+                  deps.wishlist.toggle(product.id).then((message) {
+                    if (message != null && context.mounted) {
+                      showShopMessage(context, message);
+                    }
+                  });
+                },
                 icon: PopIn(
                   key: ValueKey(wished),
                   child: Icon(
@@ -213,7 +219,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                         product.stock <= 0
                             ? 'Out of stock'
                             : product.lowStock
-                                ? 'Only ${product.stock} left in this colourway'
+                                ? 'Only ${product.stock} left'
                                 : 'In stock · ready to ship',
                         style: TextStyle(
                             color: product.stock <= 0
@@ -419,8 +425,13 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                                         builder: (_) => ProductDetailScreen(
                                             productId: related.id)),
                                   ),
-                                  onWish: () =>
-                                      deps.wishlist.toggle(related.id),
+                                  onWish: () {
+                                    deps.wishlist.toggle(related.id).then((message) {
+                                      if (message != null && context.mounted) {
+                                        showShopMessage(context, message);
+                                      }
+                                    });
+                                  },
                                   onAdd: () async {
                                     final result = await deps.cart.add(related,
                                         size: size,

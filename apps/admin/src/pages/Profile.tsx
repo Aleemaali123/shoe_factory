@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import { Field, FormError, PageHeader } from '../components/ui'
 import { useAuth, type AdminProfile } from '../data/auth'
 
@@ -8,14 +8,18 @@ export function ProfilePage() {
   const [error, setError] = useState('')
   const [saved, setSaved] = useState(false)
 
+  useEffect(() => {
+    setDraft(profile)
+  }, [profile])
+
   function set<K extends keyof AdminProfile>(key: K, value: AdminProfile[K]) {
     setDraft((current) => ({ ...current, [key]: value }))
     setSaved(false)
   }
 
-  function onSubmit(event: FormEvent) {
+  async function onSubmit(event: FormEvent) {
     event.preventDefault()
-    const message = updateProfile(draft)
+    const message = await updateProfile(draft)
     setError(message ?? '')
     setSaved(message == null)
     if (message == null) {
@@ -57,7 +61,7 @@ export function ProfilePage() {
           </Field>
         </div>
         <FormError message={error} />
-        {saved ? <p className="saved">Profile saved on this browser.</p> : null}
+        {saved ? <p className="saved">Profile saved. Use this mobile number the next time you sign in.</p> : null}
         <div className="actions">
           <button className="btn primary" type="submit">
             Save profile

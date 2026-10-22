@@ -6,6 +6,7 @@ import { createBranchService } from '../../application/branchService.js';
 import { createCartService } from '../../application/cartService.js';
 import { createCatalogService } from '../../application/catalogService.js';
 import { createCheckoutService } from '../../application/checkoutService.js';
+import { createDeskService } from '../../application/deskService.js';
 import { createNoticeService } from '../../application/noticeService.js';
 import { createOrderService } from '../../application/orderService.js';
 import { createSessionService } from '../../application/sessionService.js';
@@ -15,6 +16,7 @@ import { branchController } from './controllers/branchController.js';
 import { cartController } from './controllers/cartController.js';
 import { catalogController } from './controllers/catalogController.js';
 import { checkoutController } from './controllers/checkoutController.js';
+import { deskController } from './controllers/deskController.js';
 import { noticeController } from './controllers/noticeController.js';
 import { orderController } from './controllers/orderController.js';
 import { profileController } from './controllers/profileController.js';
@@ -29,7 +31,8 @@ export function createApp({ store, tokens }) {
   const cart = createCartService(store);
   const wishlist = createWishlistService(store);
   const orders = createOrderService(store, cart);
-  const checkout = createCheckoutService(orders);
+  const checkout = createCheckoutService(orders, store);
+  const desk = createDeskService(store);
   const account = createAccountService(store);
   const branches = createBranchService(store);
   const notices = createNoticeService(store);
@@ -55,6 +58,7 @@ export function createApp({ store, tokens }) {
       wishlist: wishlistController(wishlist),
       order: orderController(orders),
       notice: noticeController(notices),
+      desk: deskController(desk),
     },
   });
 

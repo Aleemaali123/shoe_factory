@@ -3,12 +3,11 @@ import 'package:flutter/services.dart';
 
 import '../../app/shop_context.dart';
 import '../../core/theme/app_theme.dart';
-import '../../core/utils/format.dart';
 import '../../core/widgets/brand_logo.dart';
-import '../../core/widgets/product_image.dart';
 import '../../domain/entities/shop_models.dart';
 import '../branches/branch_screen.dart';
-import '../orders/order_detail_screen.dart';
+import '../notifications/notifications_screen.dart';
+import '../orders/shopping_history_screen.dart';
 import '../viewmodels/shop_view_models.dart';
 import '../wishlist/wishlist_screen.dart';
 import 'addresses_screen.dart';
@@ -26,12 +25,17 @@ class ProfileScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final deps = Shop.of(context);
     return ListenableBuilder(
-      listenable: Listenable.merge(
-          [deps.session, deps.orders, deps.wishlist, deps.cart, deps.branches]),
+      listenable: Listenable.merge([
+          deps.session,
+          deps.orders,
+          deps.wishlist,
+          deps.cart,
+          deps.branches,
+          deps.notices,
+        ]),
       builder: (context, child) {
         final user = deps.session.user;
         final orders = deps.orders.orders;
-        final latest = orders.isEmpty ? null : orders.first;
         final pairs = orders
             .where((order) => order.status != OrderStatus.cancelled)
             .fold<int>(0, (sum, order) => sum + order.itemCount);
@@ -64,10 +68,8 @@ class ProfileScreen extends StatelessWidget {
                               () => deps.shell.select(ShopTab.cart)),
                         ],
                       ),
-                      if (latest != null) ...[
-                        const SizedBox(height: 16),
-                        _LatestOrder(order: latest),
-                      ],
+                      const SizedBox(height: 16),
+                      ShoppingHistorySection(orders: orders),
                       const SizedBox(height: 18),
                       _section(
                         'Account',
@@ -101,6 +103,14 @@ class ProfileScreen extends StatelessWidget {
                         'Shopping',
                         [
                           _tile(
+                            Icons.history,
+                            'Shopping history',
+                            orders.isEmpty
+                                ? 'Pairs you buy show up here'
+                                : '${shoppingHistory(orders).length} purchased',
+                            () => openShoppingHistory(context),
+                          ),
+                          _tile(
                             Icons.local_shipping_outlined,
                             'My orders',
                             orders.isEmpty
@@ -115,6 +125,14 @@ class ProfileScreen extends StatelessWidget {
                                 ? 'Pairs you save show up here'
                                 : '${deps.wishlist.count} saved',
                             () => _push(context, const WishlistScreen()),
+                          ),
+                          _tile(
+                            Icons.notifications_none,
+                            'Notifications',
+                            deps.notices.unread == 0
+                                ? 'Offers and order updates'
+                                : '${deps.notices.unread} unread',
+                            () => _push(context, const NotificationsScreen()),
                           ),
                           _tile(
                             Icons.storefront_outlined,
@@ -464,73 +482,5 @@ class _Header extends StatelessWidget {
     if (parts.isEmpty) return 'SF';
     if (parts.length == 1) return parts.first[0].toUpperCase();
     return (parts.first[0] + parts.last[0]).toUpperCase();
-  }
-}
-
-class _LatestOrder extends StatelessWidget {
-  const _LatestOrder({required this.order});
-
-  final ShopOrder order;
-
-  @override
-  Widget build(BuildContext context) {
-    final line = order.lines.isEmpty ? null : order.lines.first;
-    return Material(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(18),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(18),
-        onTap: () => Navigator.push(
-          context,
-          MaterialPageRoute<void>(
-              builder: (_) => OrderDetailScreen(orderId: order.id)),
-        ),
-        child: Container(
-          padding: const EdgeInsets.all(12),
-          decoration: AppDecor.card(),
-          child: Row(
-            children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: SizedBox(
-                  width: 64,
-                  height: 64,
-                  child: line == null
-                      ? const ColoredBox(color: AppColors.paleGreen)
-                      : ProductImage(url: line.imageUrl),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text('Latest order',
-                        style: TextStyle(
-                            color: AppColors.muted,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w800)),
-                    const SizedBox(height: 2),
-                    Text(
-                      line?.name ?? order.summary,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontWeight: FontWeight.w900),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      '${order.id} · ${formatRupees(order.total)}',
-                      style:
-                          const TextStyle(color: AppColors.muted, fontSize: 12),
-                    ),
-                  ],
-                ),
-              ),
-              const Icon(Icons.chevron_right, color: AppColors.muted),
-            ],
-          ),
-        ),
-      ),
-    );
   }
 }

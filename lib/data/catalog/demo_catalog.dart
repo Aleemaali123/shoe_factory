@@ -320,18 +320,24 @@ const demoNotices = <ShopNotice>[
     title: 'Your order is being prepared',
     body: 'SF-10241 is being packed at Trivandrum Central.',
     timeLabel: 'Today',
+    kind: 'order',
+    targetId: 'SF-10241',
   ),
   ShopNotice(
     id: 'n2',
     title: 'TREND10 is live this week',
     body: 'Take 10% off your cart with code TREND10.',
     timeLabel: 'Yesterday',
+    kind: 'offer',
+    targetId: 'TREND10',
   ),
   ShopNotice(
     id: 'n3',
     title: 'New sandals just landed',
     body: 'Coastline Sandal and Monsoon Slide are in store and online.',
     timeLabel: 'This week',
+    kind: 'product',
+    targetId: 'sf011',
   ),
 ];
 

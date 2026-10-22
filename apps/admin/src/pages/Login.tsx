@@ -13,11 +13,15 @@ export function LoginPage() {
     document.title = 'Sign in · Shoe Factory'
   }, [])
 
+  useEffect(() => {
+    if (!issued) setPhone(profile.phone)
+  }, [profile.phone, issued])
+
   if (name) return <Navigate to="/" replace />
 
-  function sendCode(event: FormEvent) {
+  async function sendCode(event: FormEvent) {
     event.preventDefault()
-    const result = requestOtp(phone)
+    const result = await requestOtp(phone)
     if (!result.ok || !result.code) {
       setIssued('')
       setError(result.error ?? 'Could not send a code.')
@@ -28,9 +32,9 @@ export function LoginPage() {
     setError('')
   }
 
-  function confirmCode(event: FormEvent) {
+  async function confirmCode(event: FormEvent) {
     event.preventDefault()
-    const message = verifyOtp(phone, code)
+    const message = await verifyOtp(phone, code)
     setError(message ?? '')
   }
 
@@ -54,7 +58,7 @@ export function LoginPage() {
       <section className="login-panel">
         <form className="login-card" onSubmit={issued ? confirmCode : sendCode}>
           <h2>Sign in</h2>
-          <p className="lede">Use the admin mobile number. The code stays in this browser.</p>
+          <p className="lede">Use the admin mobile number stored on the shop API.</p>
           <label className="field">
             <span>Mobile number</span>
             <input

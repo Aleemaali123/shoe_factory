@@ -16,6 +16,29 @@ export function registerRoutes(app, { auth, controllers }) {
   api.patch('/admin/products/:id/stock', controllers.catalog.adjustStock);
   api.delete('/admin/products/:id', controllers.catalog.remove);
   api.get('/branches', controllers.branch.list);
+  api.get('/coupons', controllers.desk.publicCoupons);
+
+  api.get('/admin/orders', controllers.desk.orders);
+  api.patch('/admin/orders/:id/status', controllers.desk.setOrderStatus);
+  api.get('/admin/customers', controllers.desk.customers);
+  api.patch('/admin/customers/:id', controllers.desk.saveCustomer);
+  api.get('/admin/branches', controllers.desk.branches);
+  api.post('/admin/branches', controllers.desk.createBranch);
+  api.put('/admin/branches/:id', controllers.desk.updateBranch);
+  api.delete('/admin/branches/:id', controllers.desk.deleteBranch);
+  api.get('/admin/coupons', controllers.desk.coupons);
+  api.post('/admin/coupons', controllers.desk.createCoupon);
+  api.put('/admin/coupons/:code', controllers.desk.updateCoupon);
+  api.delete('/admin/coupons/:code', controllers.desk.deleteCoupon);
+  api.get('/admin/notices', controllers.desk.notices);
+  api.post('/admin/notices', controllers.desk.createNotice);
+  api.put('/admin/notices/:id', controllers.desk.updateNotice);
+  api.delete('/admin/notices/:id', controllers.desk.deleteNotice);
+  api.post('/admin/restore', controllers.desk.restore);
+  api.get('/admin/profile', controllers.desk.profile);
+  api.patch('/admin/profile', controllers.desk.updateProfile);
+  api.post('/admin/otp/request', controllers.desk.requestOtp);
+  api.post('/admin/otp/verify', controllers.desk.verifyOtp);
 
   api.post('/auth/register', auth, controllers.account.register);
   api.post('/auth/login', auth, controllers.account.login);
@@ -23,6 +46,7 @@ export function registerRoutes(app, { auth, controllers }) {
   api.post('/auth/otp/request', controllers.account.requestOtp);
   api.post('/auth/otp/verify', auth, controllers.account.verifyOtp);
   api.post('/auth/otp/register', auth, controllers.account.registerWithOtp);
+  api.post('/auth/password/reset/request', controllers.account.requestPasswordReset);
   api.post('/auth/password/reset', controllers.account.resetPassword);
   api.get('/auth/me', auth, controllers.account.me);
   api.patch('/auth/me', auth, controllers.account.updateProfile);
@@ -61,6 +85,8 @@ export function registerRoutes(app, { auth, controllers }) {
 
   api.get('/notices', auth, controllers.notice.list);
   api.post('/notices/read', auth, controllers.notice.markAllRead);
+  api.post('/notices/:id/read', auth, controllers.notice.markRead);
+  api.delete('/notices/:id', auth, controllers.notice.dismiss);
 
   app.use('/api', api);
 }

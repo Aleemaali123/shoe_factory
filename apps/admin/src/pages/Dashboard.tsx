@@ -24,7 +24,7 @@ export function DashboardPage() {
     <>
       <PageHeader title="Overview" lede="Monthly revenue, open orders and products that need stock." />
       <p className="banner">
-        Products added here are stored on the shop API and appear in the app. Orders on this desk stay in this browser.
+        Orders, customers, branches, coupons and notices are stored on the shop API and shared with the app.
       </p>
       <section className="stats">
         <article className="stat">

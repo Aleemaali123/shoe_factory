@@ -281,6 +281,18 @@ class MemoryBranchRepository implements BranchRepository {
       if (branch.id == id) _selectedId = id;
     }
   }
+
+  void replace(List<Branch> branches) {
+    if (branches.isEmpty) return;
+    _branches
+      ..clear()
+      ..addAll(branches);
+    var kept = false;
+    for (final branch in _branches) {
+      if (branch.id == _selectedId) kept = true;
+    }
+    if (!kept) _selectedId = _branches.first.id;
+  }
 }
 
 class MemoryNoticeRepository implements NoticeRepository {
@@ -297,5 +309,23 @@ class MemoryNoticeRepository implements NoticeRepository {
     for (var i = 0; i < _notices.length; i++) {
       _notices[i] = _notices[i].copyWith(read: true);
     }
+  }
+
+  @override
+  void markRead(String id) {
+    final index = _notices.indexWhere((notice) => notice.id == id);
+    if (index < 0) return;
+    _notices[index] = _notices[index].copyWith(read: true);
+  }
+
+  @override
+  void dismiss(String id) {
+    _notices.removeWhere((notice) => notice.id == id);
+  }
+
+  @override
+  void push(ShopNotice notice) {
+    _notices.removeWhere((item) => item.id == notice.id);
+    _notices.insert(0, notice);
   }
 }

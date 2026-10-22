@@ -18,6 +18,14 @@ export function createCartService(store) {
     add(device, { productId, size, color, quantity = 1 }) {
       const product = store.product(productId);
       if (!product || product.listed === false) throw new AppError('That pair is no longer available.');
+      const colors = product.colors ?? [];
+      if (colors.length && !colors.includes(color)) {
+        throw new AppError(`${product.name} is not available in that colour.`);
+      }
+      const sizes = (product.sizes ?? []).map(Number);
+      if (sizes.length && !sizes.includes(Number(size))) {
+        throw new AppError(`${product.name} is not available in that size.`);
+      }
       const imageUrl = product.imageUrls?.[0] ?? product.images?.[0]?.url ?? '';
       if (product.stock <= 0) {
         return { added: false, message: 'This pair is out of stock.', cart: publicCart(device.cart) };
@@ -82,7 +90,12 @@ export function createCartService(store) {
 
     applyCoupon(device, code, { pickup = false } = {}) {
       const subtotal = device.cart.items.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0);
-      const attempt = evaluate({ subtotal, rawCode: code, pickup: pickup === true || pickup === 'true' });
+      const attempt = evaluate({
+        subtotal,
+        rawCode: code,
+        pickup: pickup === true || pickup === 'true',
+        coupons: store.coupons(),
+      });
       if (attempt.accepted) device.cart.couponCode = attempt.quote.couponCode;
       store.save();
       return { ...attempt, cart: publicCart(device.cart) };

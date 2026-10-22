@@ -16,6 +16,7 @@ export function createSessionService(store, accountService, cartService, wishlis
         orders: orderService.list(device),
         notices: noticeService.list(device),
         branches: branchService.list(),
+        coupons: store.shopCoupons(),
         products: catalogService.browse(),
         categories: catalogService.categories(),
       };

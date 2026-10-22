@@ -23,6 +23,9 @@ export function accountController(accountService) {
     registerWithOtp: asyncHandler(async (req, res) => {
       res.status(201).json({ data: await accountService.registerWithOtp(req.device, req.body) });
     }),
+    requestPasswordReset: asyncHandler(async (req, res) => {
+      res.json({ data: accountService.requestPasswordReset(req.body) });
+    }),
     resetPassword: asyncHandler(async (req, res) => {
       res.json({ data: await accountService.resetPassword(req.body) });
     }),

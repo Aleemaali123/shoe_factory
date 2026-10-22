@@ -49,7 +49,7 @@ export function RevenueChart({ orders }: { orders: Order[] }) {
   })
 
   const summary = active
-    ? `${active.full} is ${formatRupees(active.revenue)}, ${share}% of booked sales this year.`
+    ? `${active.full} is ${formatRupees(active.revenue)}, ${share}% of booked sales in the last 12 months.`
     : 'No revenue in this range.'
 
   return (
@@ -108,7 +108,7 @@ export function RevenueChart({ orders }: { orders: Order[] }) {
                 {prior ? `${formatChange(active.change)} from ${prior.label}` : 'Opening month'}
               </em>
               <small>
-                {active.orders} {active.orders === 1 ? 'order' : 'orders'} · {share}% of the year
+                {active.orders} {active.orders === 1 ? 'order' : 'orders'} · {share}% of the last 12 months
               </small>
             </div>
           ) : null}

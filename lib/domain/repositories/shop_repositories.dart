@@ -56,4 +56,7 @@ abstract class BranchRepository {
 abstract class NoticeRepository {
   List<ShopNotice> get notices;
   void markAllRead();
+  void markRead(String id);
+  void dismiss(String id);
+  void push(ShopNotice notice);
 }

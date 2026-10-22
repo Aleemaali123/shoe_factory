@@ -1,9 +1,13 @@
+import 'dart:async';
+
 import '../core/location/device_location.dart';
 import '../core/network/api_config.dart';
+import '../core/storage/session_store.dart';
 import '../data/catalog/demo_catalog.dart';
 import '../data/remote/remote_shop.dart';
 import '../data/repositories/memory_shop.dart';
 import '../domain/gateways/shop_gateways.dart';
+import '../domain/pricing/pricing.dart';
 import '../domain/usecases/shop_use_cases.dart';
 import '../presentation/viewmodels/shop_view_models.dart';
 
@@ -38,7 +42,7 @@ class AppDependencies {
     final catalog = CatalogUseCases(catalogRepo);
     final cart = CartUseCases(cartRepo, catalogRepo);
     final wishlist = WishlistUseCases(wishlistRepo, catalogRepo);
-    final orders = OrderUseCases(orderRepo, cart, catalogRepo);
+    final orders = OrderUseCases(orderRepo, cart, catalogRepo, notices: noticeRepo);
     final account = AccountUseCases(accountRepo);
     final branchUseCases = BranchUseCases(branchRepo);
     final notices = NoticeUseCases(noticeRepo);
@@ -88,6 +92,7 @@ class AppDependencies {
     final cache = RemoteShopCache.from(snapshot);
     final catalogRepo = MemoryCatalogRepository(snapshot.products);
     final branchRepo = MemoryBranchRepository(snapshot.branches);
+    Pricing.replaceCoupons(snapshot.coupons);
     final catalog = CatalogUseCases(
       catalogRepo,
       reload: api.products,
@@ -100,18 +105,38 @@ class AppDependencies {
     final account = ApiAccountGateway(api, cache);
     final notices = ApiNoticeGateway(api, cache);
     final branchUseCases = BranchUseCases(branchRepo);
+    final savedBranch = await SessionStore.branchId();
+    if (savedBranch != null) branchUseCases.select(savedBranch);
+    final branchModel = BranchViewModel(branchUseCases);
+    final cartModel = CartViewModel(cart);
+    final orderModel = OrdersViewModel(orders);
+    final noticeModel = NoticesViewModel(notices);
+    Timer.periodic(const Duration(seconds: 10), (_) async {
+      try {
+        branchRepo.replace(await api.branches());
+        branchModel.sync();
+        await notices.refresh();
+        noticeModel.sync();
+        await orders.refresh();
+        orderModel.sync();
+        final coupons = await api.coupons();
+        Pricing.replaceCoupons(coupons);
+        await cart.reload();
+        cartModel.sync();
+      } catch (_) {}
+    });
     return AppDependencies._(
       shell: ShellViewModel(),
       home: HomeCatalogViewModel(catalog),
       shop: ShopCatalogViewModel(catalog),
-      cart: CartViewModel(cart),
+      cart: cartModel,
       wishlist: WishlistViewModel(wishlist, catalog: catalog.watch()),
-      orders: OrdersViewModel(orders),
+      orders: orderModel,
       session: SessionViewModel(account),
-      branches: BranchViewModel(branchUseCases),
+      branches: branchModel,
       location: LocationViewModel(
           deviceLocation ?? const GeolocatorDeviceLocation()),
-      notices: NoticesViewModel(notices),
+      notices: noticeModel,
       catalog: catalog,
       account: account,
       branchUseCases: branchUseCases,

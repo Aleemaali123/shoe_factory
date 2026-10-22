@@ -1,6 +1,5 @@
+import { request } from './api'
 import { productPhotos, type Product } from '../types'
-
-const base = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.replace(/\/$/, '') || 'http://127.0.0.1:4000'
 
 function asProduct(raw: Product): Product {
   const images = productPhotos(raw)
@@ -13,24 +12,6 @@ function asProduct(raw: Product): Product {
     colors: raw.colors ?? [],
     sizes: raw.sizes ?? [],
   }
-}
-
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  let response: Response
-  try {
-    response = await fetch(`${base}${path}`, {
-      ...init,
-      headers: {
-        'Content-Type': 'application/json',
-        ...(init?.headers ?? {}),
-      },
-    })
-  } catch {
-    throw new Error('The product API is not reachable. Start the shop API, then try again.')
-  }
-  const body = (await response.json().catch(() => ({}))) as { data?: T; error?: string }
-  if (!response.ok) throw new Error(body.error || 'The product API could not complete that request.')
-  return body.data as T
 }
 
 export function listProducts() {

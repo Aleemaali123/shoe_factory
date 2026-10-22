@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 
 import '../theme/app_theme.dart';
@@ -10,6 +12,7 @@ class ProductImage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (url.startsWith('data:')) return _memory();
     return Image.network(
       url,
       fit: fit,
@@ -40,6 +43,29 @@ class ProductImage extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+
+  Widget _memory() {
+    final comma = url.indexOf(',');
+    if (comma < 0) return _fallback();
+    try {
+      final bytes = base64Decode(url.substring(comma + 1));
+      return Image.memory(
+        bytes,
+        fit: fit,
+        errorBuilder: (context, error, stackTrace) => _fallback(),
+      );
+    } catch (_) {
+      return _fallback();
+    }
+  }
+
+  Widget _fallback() {
+    return Container(
+      color: AppColors.paleGreen,
+      alignment: Alignment.center,
+      child: const Icon(Icons.hiking, size: 42, color: AppColors.deepGreen),
     );
   }
 }

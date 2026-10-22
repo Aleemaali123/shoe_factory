@@ -142,7 +142,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                         ? '2. Pickup branch'
                         : '2. Delivery address'),
                     const SizedBox(height: 10),
-                    if (model.isPickup)
+                    if (model.isPickup) ...[
                       RadioGroup<String>(
                         groupValue: model.pickupBranchId,
                         onChanged: (value) {
@@ -163,8 +163,17 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                               ),
                           ],
                         ),
-                      )
-                    else ...[
+                      ),
+                      const SizedBox(height: 8),
+                      TextField(
+                        controller: _phone,
+                        keyboardType: TextInputType.phone,
+                        decoration: const InputDecoration(
+                          labelText: 'Contact phone',
+                          prefixIcon: Icon(Icons.phone_outlined),
+                        ),
+                      ),
+                    ] else ...[
                       if (model.user == null)
                         Align(
                           alignment: Alignment.centerLeft,
@@ -379,6 +388,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     deps.cart.sync();
     deps.orders.sync();
     deps.session.sync();
+    await deps.notices.refresh();
+    if (!mounted) return;
     Navigator.pushReplacement(
         context,
         MaterialPageRoute<void>(

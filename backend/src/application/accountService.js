@@ -4,6 +4,10 @@ import { AppError } from '../domain/errors.js';
 import { accountError, addressError, digits, phoneError } from '../domain/validators.js';
 import { checkPassword, hashPassword } from '../infrastructure/security/passwords.js';
 
+function resetKey(email) {
+  return `reset:${String(email).trim().toLowerCase()}`;
+}
+
 function publicAccount(account) {
   if (!account) return null;
   return { name: account.name, email: account.email, phone: account.phone };
@@ -43,6 +47,7 @@ export function createAccountService(store) {
         phone: digits(phone),
         passwordHash: await hashPassword(String(password).trim()),
         addresses: [],
+        createdAt: new Date().toISOString(),
       };
       store.saveAccount(account);
       store.link(device, account);
@@ -108,6 +113,7 @@ export function createAccountService(store) {
         phone: digits(phone),
         passwordHash: await hashPassword(`otp-${Date.now()}`),
         addresses: [],
+        createdAt: new Date().toISOString(),
       };
       store.saveAccount(account);
       store.clearOtp(digits(phone));
@@ -115,7 +121,23 @@ export function createAccountService(store) {
       return this.profile(device);
     },
 
-    async resetPassword({ email, password, confirmPassword }) {
+    requestPasswordReset({ email }) {
+      const trimmedEmail = String(email ?? '').trim();
+      if (!trimmedEmail.includes('@') || !trimmedEmail.includes('.')) {
+        throw new AppError('Enter a valid email.');
+      }
+      const account = store.accountByEmail(trimmedEmail);
+      if (!account) throw new AppError('No account uses that email.');
+      const code = String(crypto.randomInt(100000, 1000000));
+      store.saveOtp(
+        resetKey(account.email),
+        code,
+        new Date(Date.now() + 5 * 60 * 1000).toISOString(),
+      );
+      return { code, phone: account.phone };
+    },
+
+    async resetPassword({ email, code, password, confirmPassword }) {
       const trimmedEmail = String(email ?? '').trim();
       if (!trimmedEmail.includes('@') || !trimmedEmail.includes('.')) {
         throw new AppError('Enter a valid email.');
@@ -126,8 +148,15 @@ export function createAccountService(store) {
       }
       const account = store.accountByEmail(trimmedEmail);
       if (!account) throw new AppError('No account uses that email.');
+      const pending = store.otp(resetKey(account.email));
+      if (!pending) throw new AppError('Request a reset code for this email first.');
+      if (new Date(pending.expiresAt).getTime() < Date.now()) {
+        throw new AppError('That code has expired. Request a new one.');
+      }
+      if (pending.code !== digits(code)) throw new AppError('That code does not match.');
       account.passwordHash = await hashPassword(String(password).trim());
       store.saveAccount(account);
+      store.clearOtp(resetKey(account.email));
       return { reset: true };
     },
 

@@ -19,7 +19,7 @@ export function CouponsPage() {
 
   return (
     <>
-      <PageHeader title="Coupons" lede="Codes the shop cart knows: TREND10, FACTORY200 and FREESHIP.">
+      <PageHeader title="Coupons" lede="Codes saved here are the ones the shop cart accepts.">
         <button type="button" className="btn primary" onClick={() => setEditing({ coupon: empty() })}>
           Add a code
         </button>
@@ -60,8 +60,10 @@ export function CouponsPage() {
           coupon={editing.coupon}
           previous={editing.previous}
           onClose={() => setEditing(null)}
-          onSave={(coupon) => {
-            if (saveCoupon(coupon, editing.previous)) setEditing(null)
+          onSave={async (coupon) => {
+            const problem = await saveCoupon(coupon, editing.previous)
+            if (!problem) setEditing(null)
+            return problem
           }}
         />
       ) : null}
@@ -78,22 +80,30 @@ function CouponForm({
   coupon: Coupon
   previous?: string
   onClose: () => void
-  onSave: (coupon: Coupon) => void
+  onSave: (coupon: Coupon) => Promise<string | null>
 }) {
   const [draft, setDraft] = useState(coupon)
   const [error, setError] = useState('')
 
-  function onSubmit(event: FormEvent) {
+  async function onSubmit(event: FormEvent) {
     event.preventDefault()
     const code = draft.code.trim().toUpperCase()
     if (!/^[A-Z0-9]{3,16}$/.test(code)) return setError('Use 3–16 letters or numbers.')
-    onSave({
+    const value = draft.kind === 'shipping' ? 0 : Number(draft.value)
+    if (draft.kind === 'percent' && (!Number.isFinite(value) || value < 1 || value > 100)) {
+      return setError('Enter a percent from 1 to 100.')
+    }
+    if (draft.kind === 'flat' && (!Number.isFinite(value) || value < 1)) {
+      return setError('Enter an amount in rupees.')
+    }
+    const problem = await onSave({
       ...draft,
       code,
       label: draft.label.trim() || code,
-      value: draft.kind === 'shipping' ? 0 : Number(draft.value),
+      value,
       minSubtotal: Math.max(0, Number(draft.minSubtotal) || 0),
     })
+    if (problem) setError(problem)
   }
 
   return (
@@ -110,6 +120,17 @@ function CouponForm({
               <option value="shipping">Free delivery</option>
             </select>
           </Field>
+          {draft.kind === 'shipping' ? null : (
+            <Field label={draft.kind === 'percent' ? 'Percent off' : 'Rupees off'}>
+              <input
+                type="number"
+                min={1}
+                max={draft.kind === 'percent' ? 100 : undefined}
+                value={draft.value}
+                onChange={(event) => setDraft({ ...draft, value: Number(event.target.value) })}
+              />
+            </Field>
+          )}
           <Field label="Minimum subtotal">
             <input type="number" min={0} value={draft.minSubtotal} onChange={(event) => setDraft({ ...draft, minSubtotal: Number(event.target.value) })} />
           </Field>

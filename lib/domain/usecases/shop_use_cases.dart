@@ -140,6 +140,16 @@ class CartUseCases implements CartGateway {
       return const AddToCartResult(
           added: false, message: 'This pair is out of stock.');
     }
+    if (product.colors.isNotEmpty && !product.colors.contains(color)) {
+      return AddToCartResult(
+          added: false,
+          message: '${product.name} is not available in that colour.');
+    }
+    if (product.sizes.isNotEmpty && !product.sizes.contains(size)) {
+      return AddToCartResult(
+          added: false,
+          message: '${product.name} is not available in that size.');
+    }
     final id = '${product.id}|$size|$color';
     CartItem? existing;
     for (final item in _cart.items) {
@@ -204,6 +214,9 @@ class CartUseCases implements CartGateway {
 
   @override
   Future<void> clear() async => _cart.clear();
+
+  @override
+  Future<void> reload() async {}
 }
 
 class WishlistUseCases implements WishlistGateway {
@@ -230,11 +243,13 @@ class WishlistUseCases implements WishlistGateway {
 }
 
 class OrderUseCases implements OrderGateway {
-  OrderUseCases(this._orders, this._cart, this._catalog);
+  OrderUseCases(this._orders, this._cart, this._catalog, {NoticeRepository? notices})
+      : _notices = notices;
 
   final OrderRepository _orders;
   final CartUseCases _cart;
   final CatalogRepository _catalog;
+  final NoticeRepository? _notices;
 
   @override
   List<ShopOrder> get orders => _orders.orders;
@@ -257,6 +272,7 @@ class OrderUseCases implements OrderGateway {
     required String contactPhone,
     required String destination,
     String? paymentReference,
+    String? branchId,
   }) async {
     final order = ShopOrder(
       id: _orders.nextId(),
@@ -287,6 +303,7 @@ class OrderUseCases implements OrderGateway {
       paymentReference: paymentReference,
     );
     _orders.add(order);
+    _notices?.push(_orderNotice(order));
     await _cart.clear();
     return order;
   }
@@ -295,7 +312,9 @@ class OrderUseCases implements OrderGateway {
   Future<bool> cancel(String id) async {
     final order = _orders.find(id);
     if (order == null || !order.canCancel) return false;
-    _orders.update(order.copyWith(status: OrderStatus.cancelled));
+    final cancelled = order.copyWith(status: OrderStatus.cancelled);
+    _orders.update(cancelled);
+    _notices?.push(_orderNotice(cancelled));
     return true;
   }
 
@@ -468,13 +487,30 @@ class AccountUseCases implements AccountGateway {
     return null;
   }
 
+  final Map<String, String> _resetCodes = {};
+
+  @override
+  Future<OtpRequest> requestPasswordReset(String email) async {
+    final trimmedEmail = email.trim().toLowerCase();
+    if (!trimmedEmail.contains('@') || !trimmedEmail.contains('.')) {
+      return const OtpRequest(error: 'Enter a valid email.');
+    }
+    if (!_account.hasEmail(trimmedEmail)) {
+      return const OtpRequest(error: 'No account uses that email.');
+    }
+    final code = (_random.nextInt(900000) + 100000).toString();
+    _resetCodes[trimmedEmail] = code;
+    return OtpRequest(code: code);
+  }
+
   @override
   Future<String?> resetPassword({
     required String email,
+    required String code,
     required String password,
     required String confirmPassword,
   }) async {
-    final trimmedEmail = email.trim();
+    final trimmedEmail = email.trim().toLowerCase();
     if (!trimmedEmail.contains('@') || !trimmedEmail.contains('.')) {
       return 'Enter a valid email.';
     }
@@ -482,9 +518,13 @@ class AccountUseCases implements AccountGateway {
     if (password.trim().length < 4) {
       return 'Use a password of at least 4 characters.';
     }
+    final pending = _resetCodes[trimmedEmail];
+    if (pending == null) return 'Request a reset code for this email first.';
+    if (pending != code.trim()) return 'That code does not match.';
     if (!_account.changePassword(trimmedEmail, password.trim())) {
       return 'No account uses that email.';
     }
+    _resetCodes.remove(trimmedEmail);
     return null;
   }
 
@@ -518,19 +558,6 @@ class AccountUseCases implements AccountGateway {
 
   void _openSession(UserAccount account) {
     _account.signIn(account);
-    if (_account.addresses.isNotEmpty) return;
-    _account.saveAddress(
-      Address(
-        id: 'addr-home',
-        label: 'Home',
-        name: account.name,
-        phone: account.phone,
-        line: '12, MG Road',
-        city: 'Thiruvananthapuram',
-        pincode: '695001',
-        isDefault: true,
-      ),
-    );
   }
 
   @override
@@ -602,4 +629,44 @@ class NoticeUseCases implements NoticeGateway {
 
   @override
   Future<void> markAllRead() async => _notices.markAllRead();
+
+  @override
+  Future<void> markRead(String id) async => _notices.markRead(id);
+
+  @override
+  Future<void> dismiss(String id) async => _notices.dismiss(id);
+
+  @override
+  Future<void> refresh() async {}
+}
+
+ShopNotice _orderNotice(ShopOrder order) {
+  final id = order.id;
+  final String title;
+  final String body;
+  switch (order.status) {
+    case OrderStatus.confirmed:
+      title = 'Order $id is confirmed';
+      body = 'We have received your order. The branch will start packing it.';
+    case OrderStatus.preparing:
+      title = 'Order $id is being prepared';
+      body = 'The branch is packing your shoes.';
+    case OrderStatus.onTheWay:
+      title = 'Order $id is on the way';
+      body = 'Your pair has left the branch.';
+    case OrderStatus.completed:
+      title = 'Order $id is complete';
+      body = 'Thanks for shopping at Shoe Factory.';
+    case OrderStatus.cancelled:
+      title = 'Order $id was cancelled';
+      body = 'The order is cancelled. Any reserved stock is back on the shelf.';
+  }
+  return ShopNotice(
+    id: 'order-$id-${order.status.name}-${DateTime.now().microsecondsSinceEpoch}',
+    title: title,
+    body: body,
+    timeLabel: 'Just now',
+    kind: 'order',
+    targetId: id,
+  );
 }

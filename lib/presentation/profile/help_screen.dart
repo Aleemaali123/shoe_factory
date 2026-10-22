@@ -1,13 +1,18 @@
 import 'package:flutter/material.dart';
 
 import '../../core/theme/app_theme.dart';
+import '../../domain/pricing/pricing.dart';
 
 class HelpScreen extends StatelessWidget {
   const HelpScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    const faqs = [
+    final coupons = Pricing.coupons;
+    final couponAnswer = coupons.isEmpty
+        ? 'There are no coupon codes right now.'
+        : coupons.map((coupon) => '${coupon.code}: ${coupon.label}').join(' ');
+    final faqs = [
       (
         'How long does delivery take?',
         'Home delivery in Kerala usually arrives in 2–4 days. Store pickup is ready in 1–2 days.'
@@ -22,7 +27,7 @@ class HelpScreen extends StatelessWidget {
       ),
       (
         'Which coupon codes work?',
-        'TREND10 takes 10% off. FACTORY200 takes ₹200 off orders over ₹1,999. FREESHIP waives delivery over ₹999.'
+        couponAnswer
       ),
       (
         'Is payment live?',

@@ -1,6 +1,6 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { PageHeader } from '../components/ui'
+import { FormError, PageHeader } from '../components/ui'
 import { useStore } from '../data/store'
 import {
   canCancel,
@@ -141,9 +141,15 @@ function OrderDrawer({
   order: Order
   branchName: string
   onClose: () => void
-  onStatus: (status: OrderStatus) => void
+  onStatus: (status: OrderStatus) => Promise<string | null>
 }) {
+  const [error, setError] = useState('')
   const advance = nextStatus(order.status)
+
+  async function change(status: OrderStatus) {
+    const problem = await onStatus(status)
+    setError(problem ?? '')
+  }
   const advanceLabel = nextStatusLabel(order)
   const steps = ['Confirmed', 'Preparing', order.fulfilment === 'pickup' ? 'Ready' : 'On the way', order.fulfilment === 'pickup' ? 'Collected' : 'Delivered']
   const stepIndex = ['confirmed', 'preparing', 'onTheWay', 'completed'].indexOf(order.status)
@@ -225,19 +231,20 @@ function OrderDrawer({
             <dd>{paymentLabel(order.paymentMethod)}</dd>
           </div>
         </dl>
+        <FormError message={error} />
         <div className="actions">
           {advance && advanceLabel ? (
-            <button type="button" className="btn primary" onClick={() => onStatus(advance)}>
+            <button type="button" className="btn primary" onClick={() => change(advance)}>
               {advanceLabel}
             </button>
           ) : null}
           {canCancel(order.status) ? (
-            <button type="button" className="btn danger" onClick={() => onStatus('cancelled')}>
+            <button type="button" className="btn danger" onClick={() => change('cancelled')}>
               Cancel order
             </button>
           ) : null}
           {order.status === 'cancelled' ? (
-            <button type="button" className="btn ghost" onClick={() => onStatus('confirmed')}>
+            <button type="button" className="btn ghost" onClick={() => change('confirmed')}>
               Reopen as confirmed
             </button>
           ) : null}

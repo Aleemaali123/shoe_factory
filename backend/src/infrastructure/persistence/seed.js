@@ -254,9 +254,9 @@ export const branches = [
 ];
 
 export const notices = [
-  { id: 'n1', title: 'Your order is being prepared', body: 'SF-10241 is being packed at Trivandrum Central.', timeLabel: 'Today' },
-  { id: 'n2', title: 'TREND10 is live this week', body: 'Take 10% off your cart with code TREND10.', timeLabel: 'Yesterday' },
-  { id: 'n3', title: 'New sandals just landed', body: 'Coastline Sandal and Monsoon Slide are in store and online.', timeLabel: 'This week' },
+  { id: 'n1', title: 'Your order is being prepared', body: 'SF-10241 is being packed at Trivandrum Central.', timeLabel: 'Today', kind: 'order', targetId: 'SF-10241' },
+  { id: 'n2', title: 'TREND10 is live this week', body: 'Take 10% off your cart with code TREND10.', timeLabel: 'Yesterday', kind: 'offer', targetId: 'TREND10' },
+  { id: 'n3', title: 'New sandals just landed', body: 'Coastline Sandal and Monsoon Slide are in store and online.', timeLabel: 'This week', kind: 'product', targetId: 'sf011' },
 ];
 
 function line(product, { size, color, quantity = 1 }) {
@@ -285,6 +285,7 @@ function seedOrder({ id, placedAt, lines, status, paymentMethod, couponCode }) {
     fulfilment: 'delivery',
     paymentMethod,
     status,
+    branchId: 'tvm',
     destination: '12, MG Road, Thiruvananthapuram 695001',
     contactName: 'Shoe Factory Shopper',
     contactPhone: '9876543210',
@@ -295,18 +296,17 @@ function seedOrder({ id, placedAt, lines, status, paymentMethod, couponCode }) {
 
 export function sampleOrders() {
   const byId = (id) => products.find((product) => product.id === id);
-  const now = Date.now();
   return [
     seedOrder({
       id: 'SF-10241',
-      placedAt: new Date(now - 2 * 24 * 60 * 60 * 1000).toISOString(),
+      placedAt: '2026-10-20T09:00:00.000Z',
       lines: [line(byId('sf001'), { size: 8, color: 'Red' }), line(byId('sf006'), { size: 8, color: 'White' })],
       status: 'preparing',
-      paymentMethod: 'upi',
+      paymentMethod: 'razorpay',
     }),
     seedOrder({
       id: 'SF-10182',
-      placedAt: new Date(now - 18 * 24 * 60 * 60 * 1000).toISOString(),
+      placedAt: '2026-10-04T09:00:00.000Z',
       lines: [line(byId('sf006'), { size: 8, color: 'White' })],
       status: 'completed',
       paymentMethod: 'cod',
@@ -327,10 +327,13 @@ export function createSeed({ passwordHash }) {
         email: 'shopper@shoefactory.shop',
         phone: '9876543210',
         passwordHash,
+        createdAt: '2024-06-01T00:00:00.000Z',
+        city: 'Thiruvananthapuram',
         addresses: [],
       },
     ],
     devices: {},
+    guests: {},
     otps: {},
   };
 }

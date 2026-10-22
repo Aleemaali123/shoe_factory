@@ -15,6 +15,7 @@ abstract class CartGateway {
   Future<CouponAttempt> applyCoupon(String code, {required bool pickup});
   Future<void> clearCoupon();
   Future<void> clear();
+  Future<void> reload();
 }
 
 abstract class WishlistGateway {
@@ -36,6 +37,7 @@ abstract class OrderGateway {
     required String contactPhone,
     required String destination,
     String? paymentReference,
+    String? branchId,
   });
   Future<bool> cancel(String id);
   Future<int> reorder(ShopOrder order);
@@ -62,8 +64,10 @@ abstract class AccountGateway {
     required String password,
     required String confirmPassword,
   });
+  Future<OtpRequest> requestPasswordReset(String email);
   Future<String?> resetPassword({
     required String email,
+    required String code,
     required String password,
     required String confirmPassword,
   });
@@ -87,4 +91,7 @@ abstract class NoticeGateway {
   List<ShopNotice> get notices;
   int get unread;
   Future<void> markAllRead();
+  Future<void> markRead(String id);
+  Future<void> dismiss(String id);
+  Future<void> refresh();
 }

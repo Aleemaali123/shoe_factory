@@ -1,4 +1,5 @@
 import '../../core/network/api_client.dart';
+import '../../core/storage/session_store.dart';
 import '../../domain/entities/shop_models.dart';
 import '../../domain/gateways/shop_gateways.dart';
 import '../../domain/pricing/pricing.dart';
@@ -20,6 +21,7 @@ class ShopSnapshot {
     required this.orders,
     required this.user,
     required this.addresses,
+    this.coupons = const [],
   });
 
   final List<Product> products;
@@ -31,6 +33,7 @@ class ShopSnapshot {
   final List<ShopOrder> orders;
   final UserAccount? user;
   final List<Address> addresses;
+  final List<Coupon> coupons;
 
   factory ShopSnapshot.fromJson(Map<String, dynamic> json) {
     final cart = asMap(json['cart']);
@@ -59,6 +62,10 @@ class ShopSnapshot {
       addresses: [
         for (final item in json['addresses'] as List? ?? const [])
           addressFromJson(asMap(item)),
+      ],
+      coupons: [
+        for (final item in json['coupons'] as List? ?? const [])
+          couponFromJson(asMap(item)),
       ],
     );
   }
@@ -112,8 +119,20 @@ class ShopApi {
   final ApiClient _client;
 
   Future<ShopSnapshot> openSession() async {
+    final saved = await SessionStore.token();
+    if (saved != null && saved.isNotEmpty) {
+      _client.token = saved;
+      try {
+        final data = asMap(await _client.get('/api/session'));
+        return ShopSnapshot.fromJson(data);
+      } on ApiException catch (error) {
+        if (error.statusCode != 401) rethrow;
+        _client.token = null;
+      }
+    }
     final data = asMap(await _client.post('/api/session'));
     _client.token = data['token'] as String;
+    await SessionStore.saveToken(_client.token!);
     return ShopSnapshot.fromJson(data);
   }
 
@@ -130,6 +149,20 @@ class ShopApi {
     final data = await _client.get(
         '/api/catalog/products/${Uri.encodeComponent(id)}');
     return productFromJson(asMap(data));
+  }
+
+  Future<List<Branch>> branches() async {
+    final data = await _client.get('/api/branches');
+    return [
+      for (final item in data as List) branchFromJson(asMap(item)),
+    ];
+  }
+
+  Future<List<Coupon>> coupons() async {
+    final data = await _client.get('/api/coupons');
+    return [
+      for (final item in data as List) couponFromJson(asMap(item)),
+    ];
   }
 
   Future<dynamic> post(String path, [Map<String, dynamic>? body]) =>
@@ -227,6 +260,11 @@ class ApiCartGateway implements CartGateway {
     _cache.cart = [];
     _cache.couponCode = null;
   }
+
+  @override
+  Future<void> reload() async {
+    _cache.applyCart(asMap(await _api.get('/api/cart')));
+  }
 }
 
 class ApiWishlistGateway implements WishlistGateway {
@@ -291,6 +329,7 @@ class ApiOrderGateway implements OrderGateway {
     required String contactPhone,
     required String destination,
     String? paymentReference,
+    String? branchId,
   }) async {
     final order = await _checkout.place(
       fulfilment: fulfilment,
@@ -299,6 +338,7 @@ class ApiOrderGateway implements OrderGateway {
       contactPhone: contactPhone,
       destination: destination,
       paymentReference: paymentReference,
+      branchId: branchId,
     );
     _cache.orders.insert(0, order);
     _cache.cart = [];
@@ -309,8 +349,10 @@ class ApiOrderGateway implements OrderGateway {
   @override
   Future<bool> cancel(String id) async {
     final data = asMap(await _api.post('/api/orders/$id/cancel'));
-    _cache.replaceOrder(orderFromJson(asMap(data['order'])));
-    return data['cancelled'] as bool;
+    final raw = data['order'];
+    if (raw == null) return false;
+    _cache.replaceOrder(orderFromJson(asMap(raw)));
+    return data['cancelled'] == true;
   }
 
   @override
@@ -318,6 +360,13 @@ class ApiOrderGateway implements OrderGateway {
     final data = asMap(await _api.post('/api/orders/${order.id}/reorder'));
     _cache.applyCart(asMap(data['cart']));
     return (data['units'] as num).toInt();
+  }
+
+  Future<void> refresh() async {
+    final data = await _api.get('/api/orders');
+    _cache.orders = [
+      for (final item in data as List) orderFromJson(asMap(item)),
+    ];
   }
 }
 
@@ -425,14 +474,26 @@ class ApiAccountGateway implements AccountGateway {
   }
 
   @override
+  Future<OtpRequest> requestPasswordReset(String email) async {
+    try {
+      final data = await _auth.requestPasswordReset(email);
+      return OtpRequest(code: data['code'] as String?);
+    } on ApiException catch (error) {
+      return OtpRequest(error: error.message);
+    }
+  }
+
+  @override
   Future<String?> resetPassword({
     required String email,
+    required String code,
     required String password,
     required String confirmPassword,
   }) async {
     try {
       await _auth.resetPassword(
         email: email,
+        code: code,
         password: password,
         confirmPassword: confirmPassword,
       );
@@ -516,6 +577,30 @@ class ApiNoticeGateway implements NoticeGateway {
   @override
   Future<void> markAllRead() async {
     final data = await _api.post('/api/notices/read');
-    _cache.notices = [for (final item in data as List) noticeFromJson(asMap(item))];
+    _replace(data);
+  }
+
+  @override
+  Future<void> markRead(String id) async {
+    final data = await _api.post('/api/notices/${Uri.encodeComponent(id)}/read');
+    _replace(data);
+  }
+
+  @override
+  Future<void> dismiss(String id) async {
+    final data = await _api.delete('/api/notices/${Uri.encodeComponent(id)}');
+    _replace(data);
+  }
+
+  @override
+  Future<void> refresh() async {
+    final data = await _api.get('/api/notices');
+    _replace(data);
+  }
+
+  void _replace(dynamic data) {
+    _cache.notices = [
+      for (final item in data as List) noticeFromJson(asMap(item)),
+    ];
   }
 }

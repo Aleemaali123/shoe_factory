@@ -18,7 +18,7 @@ class PoliciesScreen extends StatelessWidget {
       ),
       (
         'Privacy',
-        'Your name, phone and address stay on this device in this demo. A production store would keep them in your account and use them only to fulfil orders.'
+        'Your name, phone, addresses and orders are stored with your Shoe Factory account and used to fulfil orders. A shop session stays on this device until you sign out.'
       ),
       (
         'Terms',
