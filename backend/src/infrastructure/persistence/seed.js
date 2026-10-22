@@ -1,0 +1,336 @@
+import { calculate } from '../../domain/pricing.js';
+
+function img(id) {
+  return `https://images.unsplash.com/${id}?auto=format&fit=crop&w=900&q=80`;
+}
+
+function review(rating, comment) {
+  return { author: 'Verified buyer', rating, comment };
+}
+
+function shoe(input) {
+  return {
+    id: input.id,
+    name: input.name,
+    category: input.category,
+    price: input.price,
+    oldPrice: input.oldPrice,
+    rating: input.rating,
+    reviewCount: input.reviewCount,
+    imageUrls: input.images.map(img),
+    description: input.description,
+    badge: input.badge ?? null,
+    colors: input.colors ?? ['Black', 'White'],
+    sizes: input.sizes ?? [6, 7, 8, 9, 10, 11],
+    stock: input.stock ?? 12,
+    isNew: input.isNew ?? false,
+    reviews: input.reviews,
+  };
+}
+
+export const products = [
+  shoe({
+    id: 'sf001',
+    name: 'Air Motion Runner',
+    category: 'Sneakers',
+    price: 6499,
+    oldPrice: 7999,
+    rating: 4.6,
+    reviewCount: 128,
+    images: ['photo-1542291026-7eec264c27ff', 'photo-1606107557195-0e29a4b5b4aa'],
+    description: 'Lightweight everyday sneakers with cushioned support, a breathable upper and a bold streetwear look.',
+    badge: 'BESTSELLER',
+    colors: ['Red', 'Black', 'White'],
+    stock: 8,
+    reviews: [
+      review(5, 'Light on the feet and easy to dress up or down.'),
+      review(4, 'True to size. The cushioning holds up on long days.'),
+    ],
+  }),
+  shoe({
+    id: 'sf002',
+    name: 'Cloud Knit Sneaker',
+    category: 'Sneakers',
+    price: 5299,
+    oldPrice: 6499,
+    rating: 4.5,
+    reviewCount: 67,
+    images: ['photo-1600185365483-26d7a4cc7519', 'photo-1539185441755-769473a23570'],
+    description: 'A soft knit sneaker with a clean profile for workdays, weekends and everything between.',
+    colors: ['White', 'Grey', 'Green'],
+    stock: 10,
+    reviews: [
+      review(5, 'The knit upper feels soft from the first wear.'),
+      review(4, 'Looks sharp with both jeans and tailored trousers.'),
+    ],
+  }),
+  shoe({
+    id: 'sf003',
+    name: 'Urban Flex Trainer',
+    category: 'Sports',
+    price: 8999,
+    oldPrice: 11999,
+    rating: 4.8,
+    reviewCount: 96,
+    images: ['photo-1460353581641-37baddab0fa2', 'photo-1595950653106-6c9ebd614d3a'],
+    description: 'A versatile trainer built for movement, gym sessions and comfortable all-day wear.',
+    badge: '25% OFF',
+    colors: ['Black', 'Green', 'Grey'],
+    stock: 6,
+    reviews: [
+      review(5, 'Excellent grip and the fit stays secure on runs.'),
+      review(4, 'Worth it. I wear them for training and travel.'),
+    ],
+  }),
+  shoe({
+    id: 'sf004',
+    name: 'Trail Pro Outdoor',
+    category: 'Sports',
+    price: 7499,
+    oldPrice: 8999,
+    rating: 4.5,
+    reviewCount: 61,
+    images: ['photo-1552346154-21d32810aba3'],
+    description: 'Durable grip and dependable comfort for weekend trails and active days.',
+    badge: 'NEW',
+    colors: ['Brown', 'Black', 'Green'],
+    stock: 9,
+    isNew: true,
+    reviews: [
+      review(5, 'Sturdy without feeling heavy. Great for weekend walks.'),
+      review(4, 'The outsole grips well on wet paths.'),
+    ],
+  }),
+  shoe({
+    id: 'sf005',
+    name: 'Night Runner Pro',
+    category: 'Sports',
+    price: 9999,
+    oldPrice: 12999,
+    rating: 4.9,
+    reviewCount: 84,
+    images: ['photo-1491553895911-0055eca6402d'],
+    description: 'Our most cushioned runner, with a responsive feel for daily miles and race day.',
+    badge: 'BESTSELLER',
+    colors: ['Black', 'Grey'],
+    stock: 3,
+    reviews: [
+      review(5, 'The best cushioning I have worn from Shoe Factory.'),
+      review(5, 'Fast, stable and still comfortable after 10 km.'),
+    ],
+  }),
+  shoe({
+    id: 'sf006',
+    name: 'Classic Court Low',
+    category: 'Casual',
+    price: 4499,
+    oldPrice: 5499,
+    rating: 4.4,
+    reviewCount: 74,
+    images: ['photo-1549298916-b41d501d3772'],
+    description: 'A timeless low-top silhouette that pairs easily with your everyday wardrobe.',
+    colors: ['White', 'Navy', 'Black'],
+    stock: 14,
+    reviews: [
+      review(4, 'Clean look. I sized up by half and they are perfect.'),
+      review(5, 'A reliable everyday pair. The leather is wearing in nicely.'),
+    ],
+  }),
+  shoe({
+    id: 'sf007',
+    name: 'Everyday Slip-On',
+    category: 'Casual',
+    price: 2999,
+    oldPrice: 3499,
+    rating: 4.3,
+    reviewCount: 48,
+    images: ['photo-1560769629-975ec94e6a86'],
+    description: 'Easy to wear and easy to style. A relaxed slip-on for errands and travel days.',
+    colors: ['Black', 'White'],
+    stock: 20,
+    reviews: [
+      review(4, 'Slips on easily and still feels supported.'),
+      review(4, 'Bright colour, exactly as pictured.'),
+    ],
+  }),
+  shoe({
+    id: 'sf008',
+    name: 'Weekend Boot',
+    category: 'Casual',
+    price: 3999,
+    oldPrice: 4999,
+    rating: 4.2,
+    reviewCount: 58,
+    images: ['photo-1514989940723-e8e51635b782'],
+    description: 'A rugged boot with a soft lining for cooler days, denim and weekend plans.',
+    colors: ['Brown', 'Black'],
+    sizes: [6, 7, 8, 9, 10],
+    stock: 7,
+    reviews: [
+      review(4, 'Solid build. They needed one wear to soften up.'),
+      review(4, 'Comfortable for a full day around the city.'),
+    ],
+  }),
+  shoe({
+    id: 'sf009',
+    name: 'Executive Formal',
+    category: 'Formal',
+    price: 5999,
+    oldPrice: 6999,
+    rating: 4.7,
+    reviewCount: 53,
+    images: ['photo-1533867617858-e7b97e060509'],
+    description: 'A polished formal shoe with a refined profile for work, celebrations and special occasions.',
+    colors: ['Brown', 'Black'],
+    stock: 7,
+    reviews: [
+      review(5, 'Looks expensive and feels comfortable in the office.'),
+      review(4, 'Elegant finish. The brown colour is rich.'),
+    ],
+  }),
+  shoe({
+    id: 'sf010',
+    name: 'Heritage Loafer',
+    category: 'Formal',
+    price: 6799,
+    oldPrice: 7999,
+    rating: 4.6,
+    reviewCount: 41,
+    images: ['photo-1614252369475-5312f9b6c2f5'],
+    description: 'A leather loafer with a quiet shape that works from meetings to dinner.',
+    colors: ['Brown', 'Black'],
+    stock: 6,
+    reviews: [
+      review(5, 'Smart without being stiff. I wear them every week.'),
+      review(4, 'Beautiful leather. Take your usual size.'),
+    ],
+  }),
+  shoe({
+    id: 'sf011',
+    name: 'Coastline Sandal',
+    category: 'Sandals',
+    price: 1999,
+    oldPrice: 2499,
+    rating: 4.4,
+    reviewCount: 39,
+    images: ['photo-1603487742131-4160ec999306'],
+    description: 'An easy warm-weather sandal with a cushioned footbed and an adjustable strap.',
+    badge: 'NEW',
+    colors: ['Beige', 'Brown', 'Black'],
+    sizes: [6, 7, 8, 9, 10],
+    stock: 11,
+    isNew: true,
+    reviews: [
+      review(5, 'Comfortable straight out of the box.'),
+      review(4, 'The strap holds well on long walks.'),
+    ],
+  }),
+  shoe({
+    id: 'sf012',
+    name: 'Monsoon Slide',
+    category: 'Sandals',
+    price: 1499,
+    oldPrice: 1899,
+    rating: 4.1,
+    reviewCount: 33,
+    images: ['photo-1562273138-f46be4ebdf33'],
+    description: 'A quick-dry slide for rain, home and everything in between.',
+    badge: 'TRENDING',
+    colors: ['Green', 'Black', 'Beige'],
+    sizes: [6, 7, 8, 9, 10],
+    stock: 4,
+    isNew: true,
+    reviews: [
+      review(4, 'Light and easy to rinse after the rain.'),
+      review(4, 'Good grip on wet tile.'),
+    ],
+  }),
+];
+
+export const branches = [
+  { id: 'tvm', name: 'Trivandrum Central', address: 'MG Road, Thiruvananthapuram', hours: 'Open today · 10:00 AM–9:00 PM', phone: '0471 555 0101' },
+  { id: 'kochi', name: 'Kochi Marine Drive', address: 'Marine Drive, Kochi', hours: 'Open today · 10:00 AM–9:30 PM', phone: '0484 555 0118' },
+  { id: 'clt', name: 'Calicut Main', address: 'Mavoor Road, Kozhikode', hours: 'Open today · 10:00 AM–9:00 PM', phone: '0495 555 0134' },
+];
+
+export const notices = [
+  { id: 'n1', title: 'Your order is being prepared', body: 'SF-10241 is being packed at Trivandrum Central.', timeLabel: 'Today' },
+  { id: 'n2', title: 'TREND10 is live this week', body: 'Take 10% off your cart with code TREND10.', timeLabel: 'Yesterday' },
+  { id: 'n3', title: 'New sandals just landed', body: 'Coastline Sandal and Monsoon Slide are in store and online.', timeLabel: 'This week' },
+];
+
+function line(product, { size, color, quantity = 1 }) {
+  return {
+    productId: product.id,
+    name: product.name,
+    imageUrl: product.imageUrls[0],
+    unitPrice: product.price,
+    color,
+    size,
+    quantity,
+  };
+}
+
+function seedOrder({ id, placedAt, lines, status, paymentMethod, couponCode }) {
+  const subtotal = lines.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0);
+  const quote = calculate({ subtotal, couponCode, pickup: false });
+  return {
+    id,
+    placedAt,
+    lines,
+    subtotal: quote.subtotal,
+    discount: quote.discount,
+    deliveryFee: quote.deliveryFee,
+    total: quote.total,
+    fulfilment: 'delivery',
+    paymentMethod,
+    status,
+    destination: '12, MG Road, Thiruvananthapuram 695001',
+    contactName: 'Shoe Factory Shopper',
+    contactPhone: '9876543210',
+    couponCode: quote.couponCode,
+    paymentReference: null,
+  };
+}
+
+export function sampleOrders() {
+  const byId = (id) => products.find((product) => product.id === id);
+  const now = Date.now();
+  return [
+    seedOrder({
+      id: 'SF-10241',
+      placedAt: new Date(now - 2 * 24 * 60 * 60 * 1000).toISOString(),
+      lines: [line(byId('sf001'), { size: 8, color: 'Red' }), line(byId('sf006'), { size: 8, color: 'White' })],
+      status: 'preparing',
+      paymentMethod: 'upi',
+    }),
+    seedOrder({
+      id: 'SF-10182',
+      placedAt: new Date(now - 18 * 24 * 60 * 60 * 1000).toISOString(),
+      lines: [line(byId('sf006'), { size: 8, color: 'White' })],
+      status: 'completed',
+      paymentMethod: 'cod',
+    }),
+  ];
+}
+
+export function createSeed({ passwordHash }) {
+  return {
+    orderSeq: 10242,
+    products: [],
+    branches,
+    notices,
+    accounts: [
+      {
+        id: 'account-shopper',
+        name: 'Shoe Factory Shopper',
+        email: 'shopper@shoefactory.shop',
+        phone: '9876543210',
+        passwordHash,
+        addresses: [],
+      },
+    ],
+    devices: {},
+    otps: {},
+  };
+}
