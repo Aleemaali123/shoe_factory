@@ -1,0 +1,18 @@
+{
+  "projects": {
+    "default": "shoefactory-c7fd9"
+  },
+  "targets": {
+    "shoefactory-c7fd9": {
+      "hosting": {
+        "admin": [
+          "shoefactory-c7fd9"
+        ],
+        "shop": [
+          "shoefactory-shop"
+        ]
+      }
+    }
+  },
+  "etags": {}
+}

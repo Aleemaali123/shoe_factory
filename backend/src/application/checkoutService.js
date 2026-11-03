@@ -36,17 +36,24 @@ export function createCheckoutService(orderService, store, paymentService) {
 
       let paymentReference = String(input.paymentReference ?? '').trim() || null;
       if (paymentMethod === 'razorpay') {
-        const razorpayConfigured = paymentService?.config()?.enabled;
-        if (razorpayConfigured) {
+        if (!paymentReference) {
+          throw new AppError('Complete the Razorpay payment before placing this order.');
+        }
+        const config = paymentService?.config?.() ?? { enabled: false, mode: null };
+        const hasSignature =
+          String(input.razorpayOrderId ?? '').trim() &&
+          String(input.razorpaySignature ?? '').trim();
+        if (config.enabled && hasSignature) {
           const verified = paymentService.verify({
             orderId: input.razorpayOrderId,
             paymentId: paymentReference,
             signature: input.razorpaySignature,
           });
           paymentReference = verified.paymentId;
-        } else if (!paymentReference) {
+        } else if (config.enabled && config.mode === 'live') {
           throw new AppError('Complete the Razorpay payment before placing this order.');
         }
+        // Test mode may complete via Key Id checkout or local test confirm without a signature.
       }
 
       return orderService.place(device, {

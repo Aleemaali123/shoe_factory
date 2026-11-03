@@ -30,6 +30,8 @@ class CheckoutApi {
     required String destination,
     String? paymentReference,
     String? branchId,
+    String? razorpayOrderId,
+    String? razorpaySignature,
   }) async {
     final data = asMap(await _api.post('/api/checkout', {
       'fulfilment': fulfilment,
@@ -39,6 +41,8 @@ class CheckoutApi {
       'destination': destination,
       'paymentReference': paymentReference,
       'branchId': branchId,
+      'razorpayOrderId': razorpayOrderId,
+      'razorpaySignature': razorpaySignature,
     }));
     return orderFromJson(data);
   }

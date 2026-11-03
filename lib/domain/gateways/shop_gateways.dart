@@ -38,6 +38,8 @@ abstract class OrderGateway {
     required String destination,
     String? paymentReference,
     String? branchId,
+    String? razorpayOrderId,
+    String? razorpaySignature,
   });
   Future<bool> cancel(String id);
   Future<int> reorder(ShopOrder order);

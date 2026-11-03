@@ -34,7 +34,18 @@ class CatalogUseCases {
   }
 
   List<String> get categories =>
-      const ['All', 'Sneakers', 'Sports', 'Casual', 'Formal', 'Sandals'];
+      const [
+        'All',
+        'Sneakers',
+        'Sports',
+        'Casual',
+        'Formal',
+        'Sandals',
+        'Watches',
+        'Perfumes',
+        'Caps',
+        'Socks',
+      ];
 
   Product? findById(String id) => _catalog.findById(id);
 
@@ -169,7 +180,7 @@ class CartUseCases implements CartGateway {
         id: id,
         productId: product.id,
         name: product.name,
-        imageUrl: product.imageUrl,
+        imageUrl: product.imageFor(color),
         unitPrice: product.price,
         color: color,
         size: size,
@@ -273,6 +284,8 @@ class OrderUseCases implements OrderGateway {
     required String destination,
     String? paymentReference,
     String? branchId,
+    String? razorpayOrderId,
+    String? razorpaySignature,
   }) async {
     final order = ShopOrder(
       id: _orders.nextId(),

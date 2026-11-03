@@ -4,6 +4,7 @@ import '../core/location/device_location.dart';
 import '../core/network/api_config.dart';
 import '../core/storage/session_store.dart';
 import '../data/catalog/demo_catalog.dart';
+import '../data/remote/payments_api.dart';
 import '../data/remote/remote_shop.dart';
 import '../data/repositories/memory_shop.dart';
 import '../domain/gateways/shop_gateways.dart';
@@ -89,6 +90,10 @@ class AppDependencies {
   }) async {
     final api = ShopApi(baseUrl: baseUrl ?? defaultApiBaseUrl());
     final snapshot = await api.openSession();
+    final payments = PaymentsApi(api);
+    try {
+      await payments.refreshConfig();
+    } catch (_) {}
     final cache = RemoteShopCache.from(snapshot);
     final catalogRepo = MemoryCatalogRepository(snapshot.products);
     final branchRepo = MemoryBranchRepository(snapshot.branches);

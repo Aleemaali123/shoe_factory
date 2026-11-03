@@ -758,8 +758,12 @@ class CheckoutViewModel extends ChangeNotifier {
     );
   }
 
-  Future<ShopOrder?> commit(CheckoutContact contact,
-      {String? paymentReference}) async {
+  Future<ShopOrder?> commit(
+    CheckoutContact contact, {
+    String? paymentReference,
+    String? razorpayOrderId,
+    String? razorpaySignature,
+  }) async {
     if (_placed) return null;
     if (contact.saveAddress) {
       Address? existing;
@@ -790,6 +794,8 @@ class CheckoutViewModel extends ChangeNotifier {
         destination: contact.destination,
         paymentReference: paymentReference,
         branchId: isPickup ? pickupBranchId : null,
+        razorpayOrderId: razorpayOrderId,
+        razorpaySignature: razorpaySignature,
       );
       _placed = true;
       return order;

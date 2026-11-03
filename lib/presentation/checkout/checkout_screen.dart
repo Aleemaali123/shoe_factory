@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 
 import '../../app/shop_context.dart';
 import '../../core/payments/razorpay_checkout.dart';
+import '../../core/payments/razorpay_config.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/format.dart';
 import '../../core/widgets/empty_state.dart';
 import '../../core/widgets/primary_button.dart';
 import '../../core/widgets/product_image.dart';
+import '../../data/remote/remote_shop.dart';
 import '../orders/order_success_screen.dart';
 import '../profile/auth_screen.dart';
 import '../viewmodels/shop_view_models.dart';
@@ -95,7 +97,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                             const SizedBox(width: 10),
                             Expanded(
                               child: Text(
-                                  '${item.name}\nUK ${item.size} · ${item.color} · ×${item.quantity}',
+                                  '${item.name}\n${sizeOption(Shop.of(context).catalog.findById(item.productId)?.category, item.size)} · ${item.color} · ×${item.quantity}',
                                   style: const TextStyle(
                                       fontSize: 12, height: 1.35)),
                             ),
@@ -309,7 +311,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                           borderRadius: BorderRadius.circular(14)),
                       child: Text(
                         model.paysWithRazorpay
-                            ? 'Razorpay test mode. Card 4111 1111 1111 1111, any future expiry and CVV, or UPI success@razorpay. No real money moves.'
+                            ? (usesDemoOnlinePayment
+                                ? 'Demo online payment. Confirm the amount to place the order — no real money moves. Add Razorpay test keys to the backend .env to use real checkout.'
+                                : 'Razorpay test mode. Card 5267 3181 8797 5449 or 4386 2894 0766 0153, any future expiry and CVV, OTP 1111, or UPI success@razorpay. No real money moves.')
                             : 'Cash is collected on delivery or at the branch. Nothing is charged now.',
                         style: const TextStyle(fontWeight: FontWeight.w600),
                       ),
@@ -357,17 +361,45 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     }
 
     String? paymentReference;
+    String? razorpayOrderId;
+    String? razorpaySignature;
     if (model.paysWithRazorpay) {
       final description = contact.items.length <= 1
           ? contact.items.first.name
           : '${contact.items.first.name} + ${contact.items.length - 1} more';
+      final amountPaise = (contact.quote.total * 100).round();
       try {
-        paymentReference = await _payments.pay(
-          amountPaise: (contact.quote.total * 100).round(),
+        String? keyId;
+        String? orderId;
+        final orders = Shop.of(context).orderUseCases;
+        if (orders is ApiOrderGateway) {
+          try {
+            final session = await orders.createRazorpayOrder(
+              amountPaise: amountPaise,
+            );
+            keyId = session.keyId;
+            orderId = session.orderId;
+          } catch (error) {
+            if (!usesDemoOnlinePayment) {
+              if (!mounted) return;
+              model.note(error.toString());
+              setState(() => _busy = false);
+              return;
+            }
+          }
+        }
+        final paid = await _payments.pay(
+          amountPaise: amountPaise,
           contact: contact.phone,
           email: model.user?.email ?? '',
           description: description,
+          keyId: keyId,
+          orderId: orderId,
+          context: context,
         );
+        paymentReference = paid.paymentId;
+        razorpayOrderId = paid.orderId ?? orderId;
+        razorpaySignature = paid.signature;
       } on RazorpayCheckoutException catch (error) {
         if (!mounted) return;
         model.note(error.message);
@@ -377,8 +409,12 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     }
 
     if (!mounted) return;
-    final order =
-        await model.commit(contact, paymentReference: paymentReference);
+    final order = await model.commit(
+      contact,
+      paymentReference: paymentReference,
+      razorpayOrderId: razorpayOrderId,
+      razorpaySignature: razorpaySignature,
+    );
     if (!mounted) return;
     if (order == null) {
       setState(() => _busy = false);

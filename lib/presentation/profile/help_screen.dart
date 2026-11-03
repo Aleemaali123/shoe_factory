@@ -31,7 +31,11 @@ class HelpScreen extends StatelessWidget {
       ),
       (
         'Is payment live?',
-        'Pay online opens Razorpay in test mode. Use card 4111 1111 1111 1111 or UPI success@razorpay. Cash on delivery is still collected later. No real money moves.'
+        'Pay online uses Razorpay test checkout when the backend has Razorpay test keys in its .env file. Test cards: 5267 3181 8797 5449 or UPI success@razorpay. Cash on delivery is collected later.'
+      ),
+      (
+        'Will I get a WhatsApp update?',
+        'After a successful online payment we send a WhatsApp confirmation with a tracking link to the mobile number on the order. Use Track order in the app anytime.'
       ),
     ];
     return Scaffold(

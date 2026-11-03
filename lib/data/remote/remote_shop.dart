@@ -7,6 +7,7 @@ import '../../domain/repositories/shop_repositories.dart';
 import '../../domain/usecases/shop_results.dart';
 import 'auth_api.dart';
 import 'checkout_api.dart';
+import 'payments_api.dart';
 import 'profile_api.dart';
 import 'shop_mapper.dart';
 
@@ -297,11 +298,22 @@ class ApiWishlistGateway implements WishlistGateway {
 class ApiOrderGateway implements OrderGateway {
   ApiOrderGateway(ShopApi api, this._cache)
       : _api = api,
-        _checkout = CheckoutApi(api);
+        _checkout = CheckoutApi(api),
+        _payments = PaymentsApi(api);
 
   final ShopApi _api;
   final CheckoutApi _checkout;
+  final PaymentsApi _payments;
   final RemoteShopCache _cache;
+
+  Future<void> refreshPaymentConfig() => _payments.refreshConfig();
+
+  Future<RazorpayOrderSession> createRazorpayOrder({
+    required int amountPaise,
+    String? receipt,
+  }) {
+    return _payments.createOrder(amountPaise: amountPaise, receipt: receipt);
+  }
 
   @override
   Future<PriceQuote> preview({required bool pickup}) {
@@ -330,6 +342,8 @@ class ApiOrderGateway implements OrderGateway {
     required String destination,
     String? paymentReference,
     String? branchId,
+    String? razorpayOrderId,
+    String? razorpaySignature,
   }) async {
     final order = await _checkout.place(
       fulfilment: fulfilment,
@@ -339,6 +353,8 @@ class ApiOrderGateway implements OrderGateway {
       destination: destination,
       paymentReference: paymentReference,
       branchId: branchId,
+      razorpayOrderId: razorpayOrderId,
+      razorpaySignature: razorpaySignature,
     );
     _cache.orders.insert(0, order);
     _cache.cart = [];
