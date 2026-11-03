@@ -5,6 +5,13 @@ function publicCart(cart) {
   return { items: cart.items, couponCode: cart.couponCode };
 }
 
+function imageForColor(product, color) {
+  const images = Array.isArray(product.images) ? product.images : [];
+  const match = images.find((image) => image?.color && image.color === color && image.url);
+  if (match) return match.url;
+  return product.imageUrls?.[0] ?? images[0]?.url ?? '';
+}
+
 function capFor(product) {
   return product.stock < 5 ? product.stock : 5;
 }
@@ -26,7 +33,7 @@ export function createCartService(store) {
       if (sizes.length && !sizes.includes(Number(size))) {
         throw new AppError(`${product.name} is not available in that size.`);
       }
-      const imageUrl = product.imageUrls?.[0] ?? product.images?.[0]?.url ?? '';
+      const imageUrl = imageForColor(product, color);
       if (product.stock <= 0) {
         return { added: false, message: 'This pair is out of stock.', cart: publicCart(device.cart) };
       }

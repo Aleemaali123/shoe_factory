@@ -19,7 +19,10 @@ export function registerRoutes(app, { auth, controllers }) {
   api.get('/coupons', controllers.desk.publicCoupons);
 
   api.get('/admin/orders', controllers.desk.orders);
+  api.get('/admin/overview', controllers.desk.overview);
   api.patch('/admin/orders/:id/status', controllers.desk.setOrderStatus);
+  api.get('/admin/orders/:id/whatsapp', controllers.desk.whatsappPreview);
+  api.post('/admin/orders/:id/whatsapp', controllers.desk.sendWhatsapp);
   api.get('/admin/customers', controllers.desk.customers);
   api.patch('/admin/customers/:id', controllers.desk.saveCustomer);
   api.get('/admin/branches', controllers.desk.branches);
@@ -37,6 +40,8 @@ export function registerRoutes(app, { auth, controllers }) {
   api.post('/admin/restore', controllers.desk.restore);
   api.get('/admin/profile', controllers.desk.profile);
   api.patch('/admin/profile', controllers.desk.updateProfile);
+  api.post('/admin/login', controllers.desk.login);
+  api.patch('/admin/credentials', controllers.desk.updateCredentials);
   api.post('/admin/otp/request', controllers.desk.requestOtp);
   api.post('/admin/otp/verify', controllers.desk.verifyOtp);
 
@@ -61,6 +66,9 @@ export function registerRoutes(app, { auth, controllers }) {
 
   api.post('/checkout/quote', auth, controllers.checkout.quote);
   api.post('/checkout', auth, controllers.checkout.place);
+
+  api.get('/payments/razorpay', controllers.payment.config);
+  api.post('/payments/razorpay/orders', auth, controllers.payment.createOrder);
 
   api.post('/addresses', auth, controllers.account.saveAddress);
   api.patch('/addresses/:id', auth, controllers.account.saveAddress);

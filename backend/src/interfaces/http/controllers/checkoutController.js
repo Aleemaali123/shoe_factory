@@ -8,7 +8,7 @@ export function checkoutController(checkoutService) {
       });
     }),
     place: asyncHandler(async (req, res) => {
-      res.status(201).json({ data: checkoutService.place(req.device, req.body) });
+      res.status(201).json({ data: await checkoutService.place(req.device, req.body) });
     }),
   };
 }

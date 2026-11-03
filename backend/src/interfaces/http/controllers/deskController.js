@@ -8,8 +8,19 @@ export function deskController(desk) {
     orders: asyncHandler(async (_req, res) => {
       res.json({ data: desk.orders() });
     }),
+    overview: asyncHandler(async (_req, res) => {
+      res.json({ data: desk.overview() });
+    }),
     setOrderStatus: asyncHandler(async (req, res) => {
       res.json({ data: desk.setOrderStatus(req.params.id, req.body?.status) });
+    }),
+    whatsappPreview: asyncHandler(async (req, res) => {
+      const includeTracking = req.query?.tracking !== '0' && req.query?.tracking !== 'false';
+      res.json({ data: desk.whatsappPreview(req.params.id, { includeTracking }) });
+    }),
+    sendWhatsapp: asyncHandler(async (req, res) => {
+      const includeTracking = req.body?.includeTracking !== false;
+      res.json({ data: await desk.sendWhatsapp(req.params.id, { includeTracking }) });
     }),
     customers: asyncHandler(async (_req, res) => {
       res.json({ data: desk.customers() });
@@ -62,6 +73,12 @@ export function deskController(desk) {
     }),
     updateProfile: asyncHandler(async (req, res) => {
       res.json({ data: desk.updateProfile(req.body ?? {}) });
+    }),
+    login: asyncHandler(async (req, res) => {
+      res.json({ data: await desk.login(req.body?.username, req.body?.password) });
+    }),
+    updateCredentials: asyncHandler(async (req, res) => {
+      res.json({ data: await desk.updateCredentials(req.body ?? {}) });
     }),
     requestOtp: asyncHandler(async (req, res) => {
       res.json({ data: desk.requestOtp(req.body?.phone) });

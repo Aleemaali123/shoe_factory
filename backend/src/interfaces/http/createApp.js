@@ -1,7 +1,9 @@
 import express from 'express';
 import cors from 'cors';
 
+import { env } from '../../config/env.js';
 import { createAccountService } from '../../application/accountService.js';
+import { createCustomerNotifier } from '../../infrastructure/messaging/customerNotifier.js';
 import { createBranchService } from '../../application/branchService.js';
 import { createCartService } from '../../application/cartService.js';
 import { createCatalogService } from '../../application/catalogService.js';
@@ -9,6 +11,7 @@ import { createCheckoutService } from '../../application/checkoutService.js';
 import { createDeskService } from '../../application/deskService.js';
 import { createNoticeService } from '../../application/noticeService.js';
 import { createOrderService } from '../../application/orderService.js';
+import { createPaymentService } from '../../application/paymentService.js';
 import { createSessionService } from '../../application/sessionService.js';
 import { createWishlistService } from '../../application/wishlistService.js';
 import { accountController } from './controllers/accountController.js';
@@ -19,6 +22,7 @@ import { checkoutController } from './controllers/checkoutController.js';
 import { deskController } from './controllers/deskController.js';
 import { noticeController } from './controllers/noticeController.js';
 import { orderController } from './controllers/orderController.js';
+import { paymentController } from './controllers/paymentController.js';
 import { profileController } from './controllers/profileController.js';
 import { sessionController } from './controllers/sessionController.js';
 import { wishlistController } from './controllers/wishlistController.js';
@@ -30,9 +34,18 @@ export function createApp({ store, tokens }) {
   const catalog = createCatalogService(store);
   const cart = createCartService(store);
   const wishlist = createWishlistService(store);
-  const orders = createOrderService(store, cart);
-  const checkout = createCheckoutService(orders, store);
-  const desk = createDeskService(store);
+  const payments = createPaymentService();
+  const notifier = createCustomerNotifier({
+    channel: env.notifyChannel,
+    accountSid: env.twilioAccountSid,
+    authToken: env.twilioAuthToken,
+    smsFrom: env.twilioSmsFrom,
+    whatsappFrom: env.twilioWhatsappFrom,
+    shopPublicUrl: env.shopPublicUrl,
+  });
+  const orders = createOrderService(store, cart, notifier);
+  const checkout = createCheckoutService(orders, store, payments);
+  const desk = createDeskService(store, notifier);
   const account = createAccountService(store);
   const branches = createBranchService(store);
   const notices = createNoticeService(store);
@@ -54,6 +67,7 @@ export function createApp({ store, tokens }) {
       account: accountController(account),
       profile: profileController(account),
       checkout: checkoutController(checkout),
+      payment: paymentController(payments),
       cart: cartController(cart),
       wishlist: wishlistController(wishlist),
       order: orderController(orders),

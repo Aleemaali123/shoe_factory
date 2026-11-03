@@ -12,7 +12,7 @@ export function orderController(orderService) {
       res.json({ data: order });
     }),
     place: asyncHandler(async (req, res) => {
-      res.status(201).json({ data: orderService.place(req.device, req.body) });
+      res.status(201).json({ data: await orderService.place(req.device, req.body) });
     }),
     cancel: asyncHandler(async (req, res) => {
       res.json({ data: orderService.cancel(req.device, req.params.id) });

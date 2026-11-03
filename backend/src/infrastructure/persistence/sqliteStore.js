@@ -7,7 +7,7 @@ import { AppError } from '../../domain/errors.js';
 import { orderUpdateNotice } from '../../domain/notices.js';
 import { defaultCoupons, shopCoupons } from '../../domain/pricing.js';
 import { hashPassword } from '../security/passwords.js';
-import { createSeed, products as demoProducts, sampleOrders } from './seed.js';
+import { createSeed, notices as demoNotices, products as demoProducts, sampleOrders } from './seed.js';
 
 const schema = `
 CREATE TABLE IF NOT EXISTS meta (
@@ -34,6 +34,7 @@ CREATE TABLE IF NOT EXISTS product_images (
   position INTEGER NOT NULL,
   url TEXT NOT NULL,
   label TEXT NOT NULL,
+  color TEXT NOT NULL DEFAULT '',
   PRIMARY KEY (product_id, position)
 );
 CREATE TABLE IF NOT EXISTS product_colors (
@@ -196,11 +197,17 @@ CREATE TABLE IF NOT EXISTS coupons (
 );
 `;
 
+const DEFAULT_ADMIN_USERNAME = 'Malik@shoefactory';
+const DEFAULT_ADMIN_PASSWORD = 'Malik@123';
+
+const ADMIN_WHATSAPP = '8075090160';
+
 function defaultAdmin() {
   return {
     name: 'Factory Admin',
     email: 'admin@shoefactory.shop',
-    phone: '9876501234',
+    phone: ADMIN_WHATSAPP,
+    username: DEFAULT_ADMIN_USERNAME,
   };
 }
 
@@ -213,19 +220,45 @@ function ensureColumn(db, table, column, statement) {
   if (!columns.some((item) => item.name === column)) db.exec(statement);
 }
 
+const accessoryCategories = new Set(['Watches', 'Perfumes', 'Caps', 'Socks']);
+
+function sizeOption(category, size) {
+  if (category === 'Watches') return `${size} mm`;
+  if (category === 'Perfumes') return `${size} ml`;
+  if (category === 'Caps') return `${size} cm`;
+  return `UK ${size}`;
+}
+
+function addMissingAccessories(data) {
+  if (data.products.some((product) => accessoryCategories.has(product.category))) return false;
+  const extras = demoProducts.filter((product) => accessoryCategories.has(product.category));
+  for (const product of extras) {
+    data.products.push({
+      ...structuredClone(product),
+      listed: product.listed !== false,
+    });
+  }
+  if (!data.notices.some((notice) => notice.id === 'n4')) {
+    const notice = demoNotices.find((item) => item.id === 'n4');
+    if (notice) data.notices.push({ ...notice });
+  }
+  return extras.length > 0;
+}
+
 function imagesOf(product) {
   if (Array.isArray(product.images) && product.images.length > 0) {
     return product.images
       .filter((image) => image && String(image.url ?? '').trim())
       .map((image, index) => ({
         url: String(image.url).trim(),
-        label: String(image.position || (index === 0 ? 'Front' : 'Detail')),
+        label: String(image.position || image.label || (index === 0 ? 'Front' : 'Detail')),
+        color: String(image.color || '').trim(),
       }));
   }
   return (product.imageUrls ?? [])
     .map((url) => String(url ?? '').trim())
     .filter(Boolean)
-    .map((url, index) => ({ url, label: index === 0 ? 'Front' : 'Detail' }));
+    .map((url, index) => ({ url, label: index === 0 ? 'Front' : 'Detail', color: '' }));
 }
 
 function groupBy(rows, key) {
@@ -281,6 +314,8 @@ function writeAll(db, data) {
   insertMeta.run('adminName', admin.name);
   insertMeta.run('adminEmail', admin.email);
   insertMeta.run('adminPhone', admin.phone);
+  insertMeta.run('adminUsername', admin.username || DEFAULT_ADMIN_USERNAME);
+  insertMeta.run('adminPasswordHash', admin.passwordHash || '');
   insertMeta.run('guests', JSON.stringify(data.guests ?? {}));
 
   const insertProduct = db.prepare(`
@@ -290,7 +325,7 @@ function writeAll(db, data) {
     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
   const insertImage = db.prepare(
-    'INSERT INTO product_images (product_id, position, url, label) VALUES (?, ?, ?, ?)',
+    'INSERT INTO product_images (product_id, position, url, label, color) VALUES (?, ?, ?, ?, ?)',
   );
   const insertColor = db.prepare(
     'INSERT INTO product_colors (product_id, position, color) VALUES (?, ?, ?)',
@@ -319,7 +354,7 @@ function writeAll(db, data) {
       product.listed === false ? 0 : 1,
     );
     imagesOf(product).forEach((image, index) => {
-      insertImage.run(product.id, index, image.url, image.label);
+      insertImage.run(product.id, index, image.url, image.label, image.color || '');
     });
     (product.colors ?? []).forEach((color, index) => insertColor.run(product.id, index, color));
     (product.sizes ?? []).forEach((size, index) => insertSize.run(product.id, index, size));
@@ -545,7 +580,11 @@ function readDocument(db) {
       rating: row.rating,
       reviewCount: row.review_count,
       imageUrls: photos.map((photo) => photo.url),
-      images: photos.map((photo) => ({ url: photo.url, position: photo.label })),
+      images: photos.map((photo) => ({
+        url: photo.url,
+        position: photo.label,
+        color: photo.color || '',
+      })),
       description: row.description,
       badge: row.badge,
       colors: (colors.get(row.id) ?? []).map((item) => item.color),
@@ -713,6 +752,8 @@ function readDocument(db) {
       name: metaValue(db, 'adminName') || defaultAdmin().name,
       email: metaValue(db, 'adminEmail') || defaultAdmin().email,
       phone: metaValue(db, 'adminPhone') || defaultAdmin().phone,
+      username: metaValue(db, 'adminUsername') || DEFAULT_ADMIN_USERNAME,
+      passwordHash: metaValue(db, 'adminPasswordHash') || '',
     },
   };
 }
@@ -780,7 +821,7 @@ export class SqliteStore {
         }
         const sizes = (product.sizes ?? []).map(Number);
         if (sizes.length && !sizes.includes(Number(line.size))) {
-          throw new AppError(`${name} is not available in UK ${line.size}.`);
+          throw new AppError(`${name} is not available in ${sizeOption(product.category, line.size)}.`);
         }
         if (product.stock < Number(line.quantity)) {
           throw new AppError(`Only ${product.stock} of ${name} left.`);
@@ -1042,15 +1083,45 @@ export class SqliteStore {
     return true;
   }
 
+  adminRecord() {
+    const admin = this.data.admin ?? defaultAdmin();
+    return {
+      name: admin.name,
+      email: admin.email,
+      phone: admin.phone,
+      username: admin.username || DEFAULT_ADMIN_USERNAME,
+      passwordHash: admin.passwordHash || '',
+    };
+  }
+
   adminProfile() {
-    return { ...(this.data.admin ?? defaultAdmin()) };
+    const admin = this.adminRecord();
+    return {
+      name: admin.name,
+      email: admin.email,
+      phone: admin.phone,
+      username: admin.username,
+    };
   }
 
   saveAdmin(profile) {
+    const current = this.adminRecord();
     this.data.admin = {
+      ...current,
       name: String(profile.name).trim(),
       email: String(profile.email).trim(),
       phone: String(profile.phone).trim(),
+    };
+    this.save();
+    return this.adminProfile();
+  }
+
+  saveAdminCredentials({ username, passwordHash }) {
+    const current = this.adminRecord();
+    this.data.admin = {
+      ...current,
+      username: String(username).trim(),
+      passwordHash,
     };
     this.save();
     return this.adminProfile();
@@ -1190,6 +1261,7 @@ export async function openStore(filePath, { legacyJsonPath = null } = {}) {
   ensureColumn(db, 'orders', 'stock_held', 'ALTER TABLE orders ADD COLUMN stock_held INTEGER NOT NULL DEFAULT 0');
   ensureColumn(db, 'notices', 'kind', "ALTER TABLE notices ADD COLUMN kind TEXT NOT NULL DEFAULT 'info'");
   ensureColumn(db, 'notices', 'target_id', "ALTER TABLE notices ADD COLUMN target_id TEXT NOT NULL DEFAULT ''");
+  ensureColumn(db, 'product_images', 'color', "ALTER TABLE product_images ADD COLUMN color TEXT NOT NULL DEFAULT ''");
   const existing = db.prepare(`SELECT value FROM meta WHERE key = 'orderSeq'`).get();
   if (!existing) {
     let data;
@@ -1214,8 +1286,25 @@ export async function openStore(filePath, { legacyJsonPath = null } = {}) {
     }
   }
   const store = new SqliteStore(db, data);
+  data.admin = data.admin ?? defaultAdmin();
+  let credentials = false;
+  if (!data.admin.username) {
+    data.admin.username = DEFAULT_ADMIN_USERNAME;
+    credentials = true;
+  }
+  if (!data.admin.passwordHash) {
+    data.admin.passwordHash = await hashPassword(DEFAULT_ADMIN_PASSWORD);
+    credentials = true;
+  }
+  // Move off the previous demo admin mobile onto the live WhatsApp number.
+  const previousPhone = String(data.admin.phone ?? '').replace(/\D/g, '');
+  if (!previousPhone || previousPhone === '9876501234') {
+    data.admin.phone = ADMIN_WHATSAPP;
+    credentials = true;
+  }
+  const accessories = addMissingAccessories(data);
   const kinds = backfillNotices(data);
-  if (dropped || deduped || dated || kinds) store.save();
+  if (dropped || deduped || dated || kinds || accessories || credentials) store.save();
   if (!data.coupons.length) {
     data.coupons = defaultCoupons.map((coupon) => ({ ...coupon }));
     store.save();

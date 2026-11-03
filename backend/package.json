@@ -4,6 +4,9 @@
   "private": true,
   "type": "module",
   "description": "Shoe Factory shop API",
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "start": "node src/main.js",
     "dev": "node --watch src/main.js"

@@ -4,7 +4,7 @@ import { orderUpdateNotice } from '../domain/notices.js';
 
 const cancellable = new Set(['confirmed', 'preparing']);
 
-export function createOrderService(store, cartService) {
+export function createOrderService(store, cartService, notifier = null) {
   return {
     list(device) {
       return device.orders;
@@ -14,7 +14,7 @@ export function createOrderService(store, cartService) {
       return device.orders.find((order) => order.id === id) ?? null;
     },
 
-    place(device, input) {
+    async place(device, input) {
       const items = device.cart.items;
       if (!items.length) throw new AppError('Your cart is empty.');
       const subtotal = items.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0);
@@ -56,7 +56,14 @@ export function createOrderService(store, cartService) {
       device.orders.unshift(order);
       store.pushNotice(device, orderUpdateNotice(order.id, 'confirmed'));
       cartService.clear(device);
-      return order;
+      if (!notifier) return order;
+      const notify = await notifier.orderConfirmed(order);
+      return {
+        ...order,
+        customerMessage: notify.customerMessage || null,
+        trackingUrl: notify.trackingUrl || null,
+        whatsappComposeUrl: notify.whatsappComposeUrl || null,
+      };
     },
 
     cancel(device, id) {

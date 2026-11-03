@@ -2,7 +2,18 @@ import crypto from 'node:crypto';
 
 import { AppError } from '../domain/errors.js';
 
-const categories = ['All', 'Sneakers', 'Sports', 'Casual', 'Formal', 'Sandals'];
+const categories = [
+  'All',
+  'Sneakers',
+  'Sports',
+  'Casual',
+  'Formal',
+  'Sandals',
+  'Watches',
+  'Perfumes',
+  'Caps',
+  'Socks',
+];
 const categorySet = new Set(categories.slice(1));
 
 function discountPercent(product) {
@@ -36,6 +47,7 @@ function imagesOf(product) {
       .map((image) => ({
         url: String(image.url).trim(),
         position: String(image.position || 'Front').trim() || 'Front',
+        color: String(image.color || '').trim(),
       }));
   }
   const urls = Array.isArray(product.imageUrls) ? [...product.imageUrls] : [];
@@ -43,7 +55,7 @@ function imagesOf(product) {
   return urls
     .map((url) => String(url ?? '').trim())
     .filter(Boolean)
-    .map((url, index) => ({ url, position: index === 0 ? 'Front' : 'Detail' }));
+    .map((url, index) => ({ url, position: index === 0 ? 'Front' : 'Detail', color: '' }));
 }
 
 function presentShop(product) {
@@ -56,7 +68,12 @@ function presentShop(product) {
     oldPrice: product.oldPrice,
     rating: product.rating ?? 0,
     reviewCount: product.reviewCount ?? 0,
-    imageUrls: images.map((image) => image.url),
+    imageUrls: [...new Set(images.map((image) => image.url))],
+    images: images.map((image) => ({
+      url: image.url,
+      position: image.position,
+      color: image.color || '',
+    })),
     description: product.description ?? '',
     badge: product.badge || null,
     colors: product.colors ?? [],
@@ -109,7 +126,7 @@ function normalize(input, existing) {
   const sizes = (Array.isArray(input.sizes) ? input.sizes : [])
     .map((size) => Number(size))
     .filter((size) => Number.isInteger(size) && size > 0);
-  if (sizes.length === 0) throw new AppError('Add at least one UK size.');
+  if (sizes.length === 0) throw new AppError('Add at least one size.');
   const images = imagesOf(input);
   if (images.length === 0) throw new AppError('Add at least one photo, by upload or URL.');
   const rating = Number(input.rating);

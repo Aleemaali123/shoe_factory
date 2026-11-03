@@ -5,7 +5,7 @@ import { digits } from '../domain/validators.js';
 const fulfilments = new Set(['delivery', 'pickup']);
 const payments = new Set(['razorpay', 'cod']);
 
-export function createCheckoutService(orderService, store) {
+export function createCheckoutService(orderService, store, paymentService) {
   return {
     quote(device, { fulfilment = 'delivery' } = {}) {
       if (!fulfilments.has(fulfilment)) {
@@ -23,7 +23,7 @@ export function createCheckoutService(orderService, store) {
       });
     },
 
-    place(device, input) {
+    async place(device, input) {
       const fulfilment = input.fulfilment === 'pickup' ? 'pickup' : 'delivery';
       const paymentMethod = payments.has(input.paymentMethod) ? input.paymentMethod : '';
       if (!paymentMethod) throw new AppError('Choose Razorpay or cash on delivery.');
@@ -33,16 +33,29 @@ export function createCheckoutService(orderService, store) {
       if (contactName.length < 2) throw new AppError('Enter the recipient name.');
       if (destination.length < 5) throw new AppError('Enter where this order should go.');
       if (contactPhone.length !== 10) throw new AppError('Enter a 10-digit phone number.');
-      if (paymentMethod === 'razorpay' && !String(input.paymentReference ?? '').trim()) {
-        throw new AppError('Complete the Razorpay payment before placing this order.');
+
+      let paymentReference = String(input.paymentReference ?? '').trim() || null;
+      if (paymentMethod === 'razorpay') {
+        const razorpayConfigured = paymentService?.config()?.enabled;
+        if (razorpayConfigured) {
+          const verified = paymentService.verify({
+            orderId: input.razorpayOrderId,
+            paymentId: paymentReference,
+            signature: input.razorpaySignature,
+          });
+          paymentReference = verified.paymentId;
+        } else if (!paymentReference) {
+          throw new AppError('Complete the Razorpay payment before placing this order.');
+        }
       }
+
       return orderService.place(device, {
         fulfilment,
         paymentMethod,
         contactName,
         contactPhone,
         destination,
-        paymentReference: input.paymentReference ?? null,
+        paymentReference,
         branchId: input.branchId ?? null,
       });
     },

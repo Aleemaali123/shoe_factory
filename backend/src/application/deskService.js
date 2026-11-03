@@ -2,12 +2,14 @@ import crypto from 'node:crypto';
 
 import { AppError } from '../domain/errors.js';
 import { digits } from '../domain/validators.js';
+import { checkPassword, hashPassword } from '../infrastructure/security/passwords.js';
 
 const kinds = new Set(['percent', 'flat', 'shipping']);
+const openStatuses = new Set(['confirmed', 'preparing', 'onTheWay']);
 const noticeKinds = new Set(['info', 'offer', 'product', 'order']);
 const statuses = new Set(['confirmed', 'preparing', 'onTheWay', 'completed', 'cancelled']);
 
-export function createDeskService(store) {
+export function createDeskService(store, notifier = null) {
   return {
     coupons() {
       return store.coupons();
@@ -67,11 +69,78 @@ export function createDeskService(store) {
       return store.adminOrders();
     },
 
+    overview() {
+      const orders = store.adminOrders();
+      const open = orders.filter((order) => openStatuses.has(order.status));
+      const booked = orders.filter((order) => order.status !== 'cancelled');
+      const fulfilled = orders.filter((order) => order.status === 'completed');
+      const attention = store.products()
+        .filter((product) => product.listed !== false && Number(product.stock ?? 0) <= 5)
+        .map((product) => ({
+          id: product.id,
+          name: product.name,
+          stock: Number(product.stock ?? 0),
+          state: Number(product.stock ?? 0) <= 0 ? 'out' : 'low',
+        }))
+        .sort((a, b) => a.stock - b.stock || a.name.localeCompare(b.name));
+      const recent = [...orders]
+        .sort((a, b) => String(b.placedAt).localeCompare(String(a.placedAt)))
+        .slice(0, 5)
+        .map((order) => ({
+          id: order.id,
+          placedAt: order.placedAt,
+          contactName: order.contactName,
+          status: order.status,
+          fulfilment: order.fulfilment,
+          total: order.total,
+        }));
+      return {
+        bookedSales: booked.reduce((sum, order) => sum + Number(order.total || 0), 0),
+        fulfilledSales: fulfilled.reduce((sum, order) => sum + Number(order.total || 0), 0),
+        fulfilledCount: fulfilled.length,
+        openOrders: open.length,
+        stockAlerts: attention.length,
+        attention,
+        recent,
+        months: monthlyRevenue(booked),
+      };
+    },
+
     setOrderStatus(id, status) {
       if (!statuses.has(status)) throw new AppError('Choose a valid order status.');
       const order = store.setOrderStatus(id, status);
       if (!order) throw new AppError('That order could not be found.', 404);
       return order;
+    },
+
+    whatsappPreview(id, { includeTracking = true } = {}) {
+      const order = store.adminOrders().find((item) => item.id === id);
+      if (!order) throw new AppError('That order could not be found.', 404);
+      if (!notifier) throw new AppError('Customer messaging is not available.');
+      const compose = notifier.composeWhatsapp(order, { includeTracking: includeTracking !== false });
+      if (!compose) {
+        throw new AppError('This order needs a 10-digit mobile number before WhatsApp can open.');
+      }
+      return {
+        orderId: order.id,
+        phone: compose.phone,
+        text: compose.text,
+        whatsappComposeUrl: compose.url,
+        trackingUrl: includeTracking !== false ? notifier.trackingUrl(order) || null : null,
+      };
+    },
+
+    async sendWhatsapp(id, { includeTracking = true } = {}) {
+      const order = store.adminOrders().find((item) => item.id === id);
+      if (!order) throw new AppError('That order could not be found.', 404);
+      if (!notifier) throw new AppError('Customer messaging is not available.');
+      const result = await notifier.sendWhatsapp(order, { includeTracking: includeTracking !== false });
+      return {
+        orderId: order.id,
+        customerMessage: result.customerMessage,
+        trackingUrl: result.trackingUrl,
+        whatsappComposeUrl: result.whatsappComposeUrl,
+      };
     },
 
     customers() {
@@ -109,6 +178,36 @@ export function createDeskService(store) {
 
     profile() {
       return store.adminProfile();
+    },
+
+    async login(username, password) {
+      const name = String(username ?? '').trim();
+      const secret = String(password ?? '');
+      const admin = store.adminRecord();
+      const sameName = name.toLowerCase() === admin.username.toLowerCase();
+      if (!sameName || !(await passwordMatches(secret, admin.passwordHash))) {
+        throw new AppError('That username or password does not match.');
+      }
+      return { profile: store.adminProfile() };
+    },
+
+    async updateCredentials(input) {
+      const admin = store.adminRecord();
+      const current = String(input.currentPassword ?? '');
+      if (!(await passwordMatches(current, admin.passwordHash))) {
+        throw new AppError('Current password does not match.');
+      }
+      const username = String(input.username ?? '').trim();
+      if (!/^[A-Za-z0-9@._-]{3,64}$/.test(username)) {
+        throw new AppError('Use 3–64 letters, numbers, or @ . _ - in the username.');
+      }
+      const nextPassword = String(input.password ?? '');
+      let passwordHash = admin.passwordHash;
+      if (nextPassword) {
+        if (nextPassword.length < 6) throw new AppError('Use a password of at least 6 characters.');
+        passwordHash = await hashPassword(nextPassword);
+      }
+      return store.saveAdminCredentials({ username, passwordHash });
     },
 
     updateProfile(input) {
@@ -155,6 +254,48 @@ export function createDeskService(store) {
       };
     },
   };
+}
+
+function monthlyRevenue(orders, span = 12, now = new Date()) {
+  const cursor = new Date(now.getFullYear(), now.getMonth(), 1);
+  const months = [];
+  for (let i = span - 1; i >= 0; i -= 1) {
+    const date = new Date(cursor.getFullYear(), cursor.getMonth() - i, 1);
+    const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+    months.push({
+      key,
+      label: date.toLocaleDateString('en-IN', { month: 'short' }),
+      full: date.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' }),
+      revenue: 0,
+      orders: 0,
+      change: null,
+    });
+  }
+  const index = new Map(months.map((month, position) => [month.key, position]));
+  for (const order of orders) {
+    const placed = new Date(order.placedAt);
+    if (Number.isNaN(placed.getTime())) continue;
+    const key = `${placed.getFullYear()}-${String(placed.getMonth() + 1).padStart(2, '0')}`;
+    const slot = index.get(key);
+    if (slot === undefined) continue;
+    months[slot].revenue += Number(order.total || 0);
+    months[slot].orders += 1;
+  }
+  for (let i = 1; i < months.length; i += 1) {
+    const previous = months[i - 1].revenue;
+    if (previous === 0) continue;
+    months[i].change = ((months[i].revenue - previous) / previous) * 100;
+  }
+  return months;
+}
+
+async function passwordMatches(password, passwordHash) {
+  if (!password || !passwordHash) return false;
+  try {
+    return await checkPassword(password, passwordHash);
+  } catch {
+    return false;
+  }
 }
 
 function normalizeCoupon(input) {

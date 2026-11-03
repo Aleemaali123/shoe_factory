@@ -17,7 +17,8 @@ const store = await openStore(databasePath, {
 });
 const app = createApp({ store, tokens: createTokens(env.jwtSecret) });
 
-app.listen(env.port, () => {
-  console.log(`Shoe Factory API listening on http://127.0.0.1:${env.port}`);
+const host = process.env.HOST || '0.0.0.0';
+app.listen(env.port, host, () => {
+  console.log(`Shoe Factory API listening on http://${host}:${env.port}`);
   console.log(`SQLite database: ${databasePath}`);
 });
