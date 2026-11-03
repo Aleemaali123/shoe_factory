@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Empty, Field, Money, useTitle } from '../components/ui'
 import { quote as quoteOrder } from '../data/api'
@@ -31,10 +31,11 @@ export function CheckoutPage() {
   const [quote, setQuote] = useState<Quote>(blankQuote)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
+  const [testPay, setTestPay] = useState<{ amountPaise: number; description: string } | null>(null)
+  const testPayWaiter = useRef<{ resolve: (value: boolean) => void } | null>(null)
 
   useEffect(() => {
     shop.clearFlash()
-    // Clear cart toasts when landing on checkout so they don't cover Place order.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -63,6 +64,13 @@ export function CheckoutPage() {
     }
   }, [fulfilment, shop.cart.couponCode, shop.cart.items])
 
+  useEffect(() => {
+    return () => {
+      testPayWaiter.current?.resolve(false)
+      testPayWaiter.current = null
+    }
+  }, [])
+
   if (!shop.cart.items.length) {
     return <Empty title="Nothing to check out" body="Your cart is empty." action="Browse the shop" to="/shop" />
   }
@@ -70,6 +78,21 @@ export function CheckoutPage() {
   const destination = fulfilment === 'pickup'
     ? [branch?.name, branch?.address].filter(Boolean).join(', ')
     : [line, city, pincode].filter(Boolean).join(', ')
+
+  function askTestPayment(input: { amountPaise: number; description: string }) {
+    return new Promise<boolean>((resolve) => {
+      testPayWaiter.current?.resolve(false)
+      testPayWaiter.current = { resolve }
+      setTestPay(input)
+    })
+  }
+
+  function finishTestPayment(ok: boolean) {
+    const waiter = testPayWaiter.current
+    testPayWaiter.current = null
+    setTestPay(null)
+    waiter?.resolve(ok)
+  }
 
   async function place() {
     const contactPhone = phone.replace(/\D/g, '')
@@ -86,12 +109,15 @@ export function CheckoutPage() {
         const description = shop.cart.items.length === 1
           ? shop.cart.items[0].name
           : `${shop.cart.items[0].name} + ${shop.cart.items.length - 1} more`
-        const paid = await payWithRazorpay({
-          amountPaise: Math.round(quote.total * 100),
-          phone: contactPhone,
-          email: shop.user?.email ?? '',
-          description,
-        })
+        const paid = await payWithRazorpay(
+          {
+            amountPaise: Math.round(quote.total * 100),
+            phone: contactPhone,
+            email: shop.user?.email ?? '',
+            description,
+          },
+          { confirmTest: askTestPayment },
+        )
         paymentReference = paid.paymentId
         razorpayOrderId = paid.orderId
         razorpaySignature = paid.signature
@@ -208,15 +234,15 @@ export function CheckoutPage() {
           {payment === 'razorpay' ? (
             <p className="muted">
               {usesDemoOnlinePayment()
-                ? 'Demo online payment. Confirm the amount to place the order — no real money moves.'
-                : 'Test mode. Use card 4111 1111 1111 1111 or 5267 3181 8797 5449 (any future expiry/CVV, OTP 1111), or UPI success@razorpay. No real money moves.'}
+                ? 'Razorpay test mode. Confirm the amount on the next step — no real money moves.'
+                : 'Razorpay test mode. Use card 4111 1111 1111 1111 or 5267 3181 8797 5449 (OTP 1111), or UPI success@razorpay. No real money moves.'}
             </p>
           ) : (
             <p className="muted">Pay when the pair arrives, or when you collect it.</p>
           )}
         </div>
         {error ? <p className="error">{error}</p> : null}
-        <button className="btn primary" type="button" disabled={busy} onClick={() => void place()} style={{ marginTop: 8 }}>
+        <button className="btn primary" type="button" disabled={busy || Boolean(testPay)} onClick={() => void place()} style={{ marginTop: 8 }}>
           {busy
             ? 'Opening payment…'
             : payment === 'razorpay'
@@ -238,6 +264,25 @@ export function CheckoutPage() {
         {quote.couponCode ? <p className="ok">{quote.couponCode} · {quote.couponLabel}</p> : null}
         <Money label="Total" value={formatRupees(quote.total)} total />
       </aside>
+
+      {testPay ? (
+        <div className="pay-modal" role="dialog" aria-modal="true" aria-labelledby="pay-modal-title">
+          <div className="pay-modal-card">
+            <h3 id="pay-modal-title">Razorpay test payment</h3>
+            <p>{testPay.description}</p>
+            <p className="pay-modal-amount">{formatRupees(testPay.amountPaise / 100)}</p>
+            <p className="muted">Test mode — no real money is charged.</p>
+            <div className="pay-modal-actions">
+              <button type="button" className="btn ghost" onClick={() => finishTestPayment(false)}>
+                Cancel
+              </button>
+              <button type="button" className="btn primary" onClick={() => finishTestPayment(true)}>
+                Pay now
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   )
 }

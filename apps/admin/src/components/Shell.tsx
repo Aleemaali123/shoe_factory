@@ -20,7 +20,7 @@ const links = [
 export function Shell() {
   const { data, error, flash, dismissFlash, resetDemo } = useStore()
   const { products, flash: productFlash, dismissFlash: dismissProductFlash } = useCatalog()
-  const { name, phone, signOut } = useAuth()
+  const { name, username, signOut } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
   const [open, setOpen] = useState(false)
@@ -36,7 +36,7 @@ export function Shell() {
 
   useEffect(() => {
     const current = links.find((link) => (link.end ? location.pathname === '/' : location.pathname.startsWith(link.to)))
-    document.title = current ? `${current.label} · Shoe Factory` : 'Shoe Factory Admin'
+    document.title = current ? `${current.label} · ShoeFactory Admin` : 'ShoeFactory Admin'
   }, [location.pathname])
 
   return (
@@ -61,7 +61,7 @@ export function Shell() {
             Signed in as
             <NavLink to="/profile" className="who-link">
               <strong>{name}</strong>
-              {phone ? <span>+91 {phone}</span> : null}
+              {username ? <span>{username}</span> : null}
             </NavLink>
           </p>
           <button type="button" className="btn ghost" onClick={() => void resetDemo()}>

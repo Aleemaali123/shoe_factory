@@ -54,7 +54,10 @@ backend/data/
 # Widget Preview related
 .widget_preview/
 
-# Admin web
+# Admin web and customer web app
 node_modules/
 apps/admin/dist/
 apps/admin/.vite/
+web_app/dist/
+web_app/.vite/
+.firebase/

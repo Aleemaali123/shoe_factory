@@ -56,7 +56,8 @@ export function createCustomerNotifier({
     if (!phone) {
       logger.warn('[notify] skipped: phone is not a 10-digit mobile');
       return {
-        customerMessage: 'Order confirmed. Add a 10-digit mobile number to receive WhatsApp updates.',
+        customerMessage: 'Add a 10-digit mobile number next time for WhatsApp updates.',
+        deskMessage: 'This order has no 10-digit mobile number, so WhatsApp could not be prepared.',
         trackingUrl: tracking || null,
         whatsappComposeUrl: null,
       };
@@ -77,7 +78,8 @@ export function createCustomerNotifier({
     if (!accountSid || !authToken) {
       logger.info(`[notify] ${wanted.join(' + ')} not sent (Twilio is not configured). ${phone}: ${text}`);
       return {
-        customerMessage: `Order confirmed. Open WhatsApp from the desk to message ${maskPhone(phone)}, or connect Twilio in the server settings.`,
+        customerMessage: `We'll keep you updated at ${maskPhone(phone)}.`,
+        deskMessage: `Connect WhatsApp or SMS (Twilio) in the server settings to deliver this message to ${maskPhone(phone)}. Open the compose link from the desk until then.`,
         trackingUrl: tracking || null,
         whatsappComposeUrl: compose.url,
       };
@@ -114,8 +116,10 @@ export function createCustomerNotifier({
       logger.info(`[notify] ${sent.join(' + ')} sent to ${phone} for ${order.id}`);
     }
 
+    const report = summary(phone, sent, failed.map((item) => item.name));
     return {
-      customerMessage: summary(phone, sent, failed.map((item) => item.name)),
+      customerMessage: report.customerMessage,
+      deskMessage: report.deskMessage,
       trackingUrl: tracking || null,
       whatsappComposeUrl: compose.url,
     };
@@ -202,15 +206,23 @@ function summary(phone, sent, failed) {
     sms: 'text message',
   };
   if (sent.length === 1 && failed.length === 0) {
-    return `Confirmation sent to ${masked} on ${label[sent[0]]}.`;
+    const message = `Confirmation sent to ${masked} on ${label[sent[0]]}.`;
+    return { customerMessage: message, deskMessage: message };
   }
   if (sent.length === 2) {
-    return `Confirmation sent to ${masked} on WhatsApp and by text message.`;
+    const message = `Confirmation sent to ${masked} on WhatsApp and by text message.`;
+    return { customerMessage: message, deskMessage: message };
   }
   if (sent.length === 1) {
-    return `Confirmation sent to ${masked} on ${label[sent[0]]}. The other channel could not be reached.`;
+    return {
+      customerMessage: `Confirmation sent to ${masked} on ${label[sent[0]]}.`,
+      deskMessage: `Confirmation sent to ${masked} on ${label[sent[0]]}. ${label[failed[0]] || 'The other channel'} could not be reached.`,
+    };
   }
-  return `Order confirmed. We could not send WhatsApp or a text message to ${masked}.`;
+  return {
+    customerMessage: `We'll keep you updated at ${masked}.`,
+    deskMessage: `Could not send WhatsApp or SMS to ${masked}. Check Twilio credentials and from-numbers.`,
+  };
 }
 
 function formatRupees(amount) {

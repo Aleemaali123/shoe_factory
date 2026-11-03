@@ -18,6 +18,47 @@ String _indianGroup(String whole) {
   return '${parts.join(',')},$last3';
 }
 
+String sizeHeading(String category) {
+  switch (category) {
+    case 'Watches':
+      return 'Case size';
+    case 'Perfumes':
+      return 'Volume';
+    case 'Caps':
+      return 'Head size';
+    default:
+      return 'Size (UK)';
+  }
+}
+
+String sizeOption(String? category, int size) {
+  switch (category) {
+    case 'Watches':
+      return '$size mm';
+    case 'Perfumes':
+      return '$size ml';
+    case 'Caps':
+      return '$size cm';
+    default:
+      return 'UK $size';
+  }
+}
+
+String sizeGuide(String category) {
+  switch (category) {
+    case 'Watches':
+      return 'Case size is the width of the watch face in millimetres. 40 mm wears smaller and 42 mm wears larger.';
+    case 'Perfumes':
+      return 'Volume is the bottle size in millilitres. 50 ml is easy to carry. 100 ml is the full bottle.';
+    case 'Caps':
+      return 'Head size is the circumference in centimetres. If you are between sizes, choose the larger one.';
+    case 'Socks':
+      return 'Sock size follows your usual UK shoe size.';
+    default:
+      return 'Choose your usual UK size. If you are between sizes, the next size up is the safer fit for sneakers and boots. Sandals can follow your regular size.';
+  }
+}
+
 String formatDate(DateTime date) {
   const months = [
     'Jan',

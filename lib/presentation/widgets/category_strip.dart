@@ -98,6 +98,14 @@ class CategoryStrip extends StatelessWidget {
         return Icons.business_center_rounded;
       case 'Sandals':
         return Icons.beach_access_rounded;
+      case 'Watches':
+        return Icons.watch_rounded;
+      case 'Perfumes':
+        return Icons.spa_rounded;
+      case 'Caps':
+        return Icons.face_retouching_natural_rounded;
+      case 'Socks':
+        return Icons.layers_rounded;
       default:
         return Icons.apps_rounded;
     }

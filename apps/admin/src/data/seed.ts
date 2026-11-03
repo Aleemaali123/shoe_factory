@@ -214,6 +214,126 @@ const catalog: Product[] = [
     stock: 4,
     isNew: true,
   }),
+  shoe({
+    id: 'sf013',
+    name: 'Classic Steel Watch',
+    category: 'Watches',
+    price: 3499,
+    oldPrice: 4299,
+    rating: 4.6,
+    reviewCount: 44,
+    image: 'photo-1524805444758-089113d48a6d',
+    description: 'A slim steel watch with a clean dial for workdays and evenings.',
+    badge: 'NEW',
+    colors: ['Silver', 'Black'],
+    sizes: [40, 42],
+    stock: 9,
+    isNew: true,
+  }),
+  shoe({
+    id: 'sf014',
+    name: 'Sport Chronograph',
+    category: 'Watches',
+    price: 4999,
+    oldPrice: 5999,
+    rating: 4.7,
+    reviewCount: 31,
+    image: 'photo-1523170335258-f5ed11844a49',
+    description: 'A sport watch with a bold dial and a secure strap.',
+    colors: ['Black', 'Navy'],
+    sizes: [42],
+    stock: 6,
+    isNew: true,
+  }),
+  shoe({
+    id: 'sf015',
+    name: 'Cedar Eau de Parfum',
+    category: 'Perfumes',
+    price: 1899,
+    oldPrice: 2299,
+    rating: 4.5,
+    reviewCount: 52,
+    image: 'photo-1541643600914-78b084683601',
+    description: 'A warm woody fragrance with a soft trail, bottled for daily wear.',
+    badge: 'BESTSELLER',
+    colors: ['Cedar'],
+    sizes: [50, 100],
+    stock: 14,
+  }),
+  shoe({
+    id: 'sf016',
+    name: 'Citrus Fresh Mist',
+    category: 'Perfumes',
+    price: 1499,
+    oldPrice: 1799,
+    rating: 4.4,
+    reviewCount: 27,
+    image: 'photo-1594035910387-fea47794261f',
+    description: 'A bright citrus mist for warm days, office hours and travel.',
+    badge: 'NEW',
+    colors: ['Citrus'],
+    sizes: [50, 100],
+    stock: 11,
+    isNew: true,
+  }),
+  shoe({
+    id: 'sf017',
+    name: 'Everyday Cotton Cap',
+    category: 'Caps',
+    price: 799,
+    oldPrice: 999,
+    rating: 4.3,
+    reviewCount: 36,
+    image: 'photo-1588850561407-ed78c282e89b',
+    description: 'A soft cotton cap with a curved brim for sun, travel and weekends.',
+    colors: ['Black', 'Navy', 'Beige'],
+    sizes: [56, 58],
+    stock: 18,
+  }),
+  shoe({
+    id: 'sf018',
+    name: 'Club Crest Cap',
+    category: 'Caps',
+    price: 999,
+    oldPrice: 1299,
+    rating: 4.5,
+    reviewCount: 22,
+    image: 'photo-1521369909029-2afed882baee',
+    description: 'A structured cap with a small crest, made for match days and city walks.',
+    badge: 'TRENDING',
+    colors: ['Red', 'White', 'Black'],
+    sizes: [56, 58],
+    stock: 8,
+    isNew: true,
+  }),
+  shoe({
+    id: 'sf019',
+    name: 'Everyday Crew Socks',
+    category: 'Socks',
+    price: 399,
+    oldPrice: 499,
+    rating: 4.4,
+    reviewCount: 63,
+    image: 'photo-1586350977771-b3b0abd50c82',
+    description: 'A cushioned crew sock in breathable cotton for work shoes and sneakers.',
+    colors: ['Black', 'White', 'Grey'],
+    stock: 24,
+  }),
+  shoe({
+    id: 'sf020',
+    name: 'Sport Ankle Socks',
+    category: 'Socks',
+    price: 349,
+    oldPrice: 449,
+    rating: 4.2,
+    reviewCount: 29,
+    image: 'photo-1586350977771-b3b0abd50c82',
+    description: 'A low ankle sock with a snug cuff for training and warm-weather shoes.',
+    badge: 'NEW',
+    colors: ['White', 'Black'],
+    stock: 16,
+    isNew: true,
+  }),
 ]
 
 const branches: Branch[] = [
@@ -285,6 +405,14 @@ const notices: Notice[] = [
     kind: 'product',
     targetId: 'sf011',
   },
+  {
+    id: 'n4',
+    title: 'Watches, scents, caps and socks',
+    body: 'New accessories are in the shop, from steel watches to crew socks.',
+    timeLabel: 'This week',
+    kind: 'product',
+    targetId: 'sf013',
+  },
 ]
 
 function daysAgo(days: number, hour: number) {
@@ -292,89 +420,6 @@ function daysAgo(days: number, hour: number) {
   date.setDate(date.getDate() - days)
   date.setHours(hour, 20, 0, 0)
   return date.toISOString()
-}
-
-function onDayInMonth(monthsBack: number, day: number, hour: number) {
-  const date = new Date()
-  date.setDate(1)
-  date.setHours(hour, 15, 0, 0)
-  date.setMonth(date.getMonth() - monthsBack)
-  const last = new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate()
-  date.setDate(Math.min(day, last))
-  return date
-}
-
-const shoppers = [
-  {
-    customerId: 'c1',
-    contactName: 'Shoe Factory Shopper',
-    contactPhone: '9876543210',
-    destination: '12, MG Road, Thiruvananthapuram 695001',
-    branchId: 'tvm',
-  },
-  {
-    customerId: 'c2',
-    contactName: 'Anjali Menon',
-    contactPhone: '9847011122',
-    destination: '9, Panampilly Nagar, Kochi 682036',
-    branchId: 'kochi',
-  },
-  {
-    customerId: 'c3',
-    contactName: 'Rahul Nair',
-    contactPhone: '9895123456',
-    destination: '18, Mavoor Road, Kozhikode 673001',
-    branchId: 'clt',
-  },
-]
-
-const historyPlan: { ago: number; day: number; shopper: number; lines: [string, number][]; pickup?: boolean }[] = [
-  { ago: 11, day: 6, shopper: 0, lines: [['sf004', 1], ['sf008', 1]] },
-  { ago: 11, day: 18, shopper: 1, lines: [['sf006', 2]], pickup: true },
-  { ago: 10, day: 4, shopper: 2, lines: [['sf001', 2]] },
-  { ago: 10, day: 19, shopper: 0, lines: [['sf009', 1], ['sf002', 1]] },
-  { ago: 9, day: 8, shopper: 1, lines: [['sf003', 1], ['sf005', 1]] },
-  { ago: 9, day: 21, shopper: 2, lines: [['sf005', 1]], pickup: true },
-  { ago: 8, day: 5, shopper: 0, lines: [['sf004', 1], ['sf003', 1]] },
-  { ago: 8, day: 17, shopper: 1, lines: [['sf009', 1], ['sf008', 1]], pickup: true },
-  { ago: 7, day: 9, shopper: 2, lines: [['sf001', 2], ['sf005', 1]] },
-  { ago: 7, day: 23, shopper: 0, lines: [['sf004', 1]] },
-  { ago: 6, day: 4, shopper: 1, lines: [['sf003', 2]] },
-  { ago: 6, day: 18, shopper: 2, lines: [['sf005', 1], ['sf009', 1]], pickup: true },
-  { ago: 5, day: 7, shopper: 0, lines: [['sf005', 1], ['sf004', 1]] },
-  { ago: 5, day: 20, shopper: 1, lines: [['sf010', 1], ['sf006', 1]] },
-  { ago: 4, day: 6, shopper: 2, lines: [['sf001', 2]], pickup: true },
-  { ago: 4, day: 16, shopper: 0, lines: [['sf005', 1], ['sf003', 1]] },
-  { ago: 3, day: 8, shopper: 1, lines: [['sf005', 2]] },
-  { ago: 3, day: 22, shopper: 2, lines: [['sf003', 1], ['sf004', 1]], pickup: true },
-  { ago: 2, day: 5, shopper: 0, lines: [['sf001', 2], ['sf005', 1]] },
-  { ago: 2, day: 19, shopper: 1, lines: [['sf001', 1], ['sf003', 1]] },
-  { ago: 1, day: 6, shopper: 2, lines: [['sf005', 1], ['sf003', 1]] },
-  { ago: 1, day: 14, shopper: 0, lines: [['sf004', 1], ['sf010', 1], ['sf002', 1]], pickup: true },
-]
-
-function historyOrders(byId: (id: string) => Product): Order[] {
-  return historyPlan.map((plan, index) => {
-    const placed = onDayInMonth(plan.ago, plan.day, 10 + (index % 6))
-    const month = String(placed.getMonth() + 1).padStart(2, '0')
-    const shopper = shoppers[plan.shopper]
-    return makeOrder({
-      id: `SF-H${placed.getFullYear()}${month}-${index % 2 === 0 ? 1 : 2}`,
-      placedAt: placed.toISOString(),
-      lines: plan.lines.map(([id, quantity]) => {
-        const product = byId(id)
-        return line(product, 8, product.colors[0] ?? 'Black', quantity)
-      }),
-      fulfilment: plan.pickup ? 'pickup' : 'delivery',
-      paymentMethod: index % 3 === 0 ? 'upi' : index % 3 === 1 ? 'card' : 'cod',
-      status: 'completed',
-      destination: shopper.destination,
-      contactName: shopper.contactName,
-      contactPhone: shopper.contactPhone,
-      customerId: shopper.customerId,
-      branchId: shopper.branchId,
-    })
-  })
 }
 
 function line(product: Product, size: number, color: string, quantity = 1): OrderLine {
@@ -462,7 +507,6 @@ export function createSeed(): AdminData {
   ]
 
   const orders: Order[] = [
-    ...historyOrders(byId),
     makeOrder({
       id: 'SF-10241',
       placedAt: daysAgo(2, 14),
@@ -579,6 +623,5 @@ export function createSeed(): AdminData {
     branches: branches.map((branch) => ({ ...branch })),
     coupons: coupons.map((coupon) => ({ ...coupon })),
     notices: notices.map((notice) => ({ ...notice })),
-    revenueBackfill: true,
   }
 }

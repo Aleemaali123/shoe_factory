@@ -95,3 +95,11 @@ export function canCancel(status: OrderStatus) {
 export function isOpen(status: OrderStatus) {
   return status === 'confirmed' || status === 'preparing' || status === 'onTheWay'
 }
+
+export function sizeSummary(category: string, sizes: number[]) {
+  const values = sizes.join(', ')
+  if (category === 'Watches') return `${values} mm`
+  if (category === 'Perfumes') return `${values} ml`
+  if (category === 'Caps') return `${values} cm`
+  return `UK ${values}`
+}

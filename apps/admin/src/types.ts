@@ -12,6 +12,7 @@ export const photoPositions = ['Front', 'Side', 'Back', 'Top', 'Sole', 'Heel', '
 export type ProductImage = {
   url: string
   position: string
+  color?: string
 }
 
 export type Product = {
@@ -35,9 +36,11 @@ export type Product = {
 
 export function productPhotos(product: Pick<Product, 'imageUrl' | 'images'>): ProductImage[] {
   if (Array.isArray(product.images) && product.images.length > 0) {
-    return product.images.filter((image) => image?.url?.trim())
+    return product.images
+      .filter((image) => image?.url?.trim())
+      .map((image) => ({ ...image, color: image.color ?? '' }))
   }
-  if (product.imageUrl) return [{ url: product.imageUrl, position: 'Front' }]
+  if (product.imageUrl) return [{ url: product.imageUrl, position: 'Front', color: '' }]
   return []
 }
 
@@ -116,7 +119,16 @@ export type AdminData = {
   branches: Branch[]
   coupons: Coupon[]
   notices: Notice[]
-  revenueBackfill?: boolean
 }
 
-export const categories = ['Sneakers', 'Sports', 'Casual', 'Formal', 'Sandals']
+export const categories = [
+  'Sneakers',
+  'Sports',
+  'Casual',
+  'Formal',
+  'Sandals',
+  'Watches',
+  'Perfumes',
+  'Caps',
+  'Socks',
+]

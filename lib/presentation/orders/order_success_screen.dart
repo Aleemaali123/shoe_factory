@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../app/shop_context.dart';
 import '../../core/theme/app_theme.dart';
@@ -64,8 +65,9 @@ class _OrderSuccessScreenState extends State<OrderSuccessScreen>
                   ).animate(fade),
                   child: Column(
                     children: [
-                      const Text('Order placed',
-                          style: TextStyle(
+                      Text(
+                          order.paidOnline ? 'Payment received' : 'Order placed',
+                          style: const TextStyle(
                               fontSize: 28, fontWeight: FontWeight.w900)),
                       const SizedBox(height: 10),
                       Text(
@@ -74,6 +76,41 @@ class _OrderSuccessScreenState extends State<OrderSuccessScreen>
                         style: const TextStyle(
                             color: AppColors.muted, height: 1.5),
                       ),
+                      if (order.customerMessage != null &&
+                          order.customerMessage!.trim().isNotEmpty) ...[
+                        const SizedBox(height: 12),
+                        Text(
+                          order.customerMessage!,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                              fontWeight: FontWeight.w700, height: 1.4),
+                        ),
+                      ],
+                      if (order.trackingUrl != null &&
+                          order.trackingUrl!.isNotEmpty) ...[
+                        const SizedBox(height: 12),
+                        Text(
+                          order.trackingUrl!,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            color: AppColors.deepGreen,
+                            fontWeight: FontWeight.w700,
+                            height: 1.4,
+                          ),
+                        ),
+                        TextButton(
+                          onPressed: () async {
+                            await Clipboard.setData(
+                                ClipboardData(text: order.trackingUrl!));
+                            if (!context.mounted) return;
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                  content: Text('Tracking link copied')),
+                            );
+                          },
+                          child: const Text('Copy tracking link'),
+                        ),
+                      ],
                       const SizedBox(height: 22),
                       Container(
                         width: double.infinity,
@@ -85,7 +122,11 @@ class _OrderSuccessScreenState extends State<OrderSuccessScreen>
                             _row('Total', formatRupees(order.total)),
                             _row('Fulfilment',
                                 fulfilmentLabel(order.fulfilment)),
-                            _row('Payment', paymentLabel(order.paymentMethod)),
+                            _row(
+                                'Payment',
+                                order.paidOnline
+                                    ? '${paymentLabel(order.paymentMethod)} · paid'
+                                    : paymentLabel(order.paymentMethod)),
                             if (order.paymentReference != null)
                               _row('Razorpay id', order.paymentReference!),
                             _row(order.isPickup ? 'Branch' : 'Deliver to',

@@ -165,7 +165,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         const SliverFillRemaining(
                           hasScrollBody: false,
                           child: Center(
-                              child: Text('No shoes match that search.')),
+                              child: Text('Nothing matches that search.')),
                         )
                       else
                         _grid(products),
@@ -310,7 +310,7 @@ class _HomeScreenState extends State<HomeScreen> {
               controller: _search,
               onChanged: deps.home.setQuery,
               decoration: InputDecoration(
-                hintText: 'Search shoes, styles, colours...',
+                hintText: 'Search shoes, watches, caps...',
                 prefixIcon: const Icon(Icons.search),
                 suffixIcon: deps.home.query.isEmpty
                     ? null
@@ -349,6 +349,14 @@ class _HomeScreenState extends State<HomeScreen> {
         action: 'Shop formal',
         imageUrl: deps.catalog.findById('sf009')?.imageUrl ?? '',
         onTap: () => deps.home.setCategory('Formal'),
+      ),
+      _BannerData(
+        kicker: 'NEW IN',
+        title: 'ACCESSORIES',
+        subtitle: 'Watches, scents, caps and socks.',
+        action: 'Shop watches',
+        imageUrl: deps.catalog.findById('sf013')?.imageUrl ?? '',
+        onTap: () => deps.home.setCategory('Watches'),
       ),
     ];
     _bannerPages = banners.length;

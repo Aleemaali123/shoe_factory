@@ -1,13 +1,13 @@
 import { useMemo, useState, type FormEvent } from 'react'
 import { useCatalog } from '../data/catalog'
 import { useStore } from '../data/store'
-import { formatRupees } from '../lib/format'
+import { formatRupees, sizeSummary } from '../lib/format'
 import { stockLabel, stockState, stockTone } from '../lib/stock'
 import { categories, photoPositions, productPhotos, type Product, type StockFilter } from '../types'
 import { Field, FormError, Modal, PageHeader } from '../components/ui'
 
 const filters: { id: StockFilter; label: string; hint: string }[] = [
-  { id: 'all', label: 'All products', hint: 'Every pair in the catalogue' },
+  { id: 'all', label: 'All products', hint: 'Every item in the catalogue' },
   { id: 'in', label: 'In stock', hint: 'More than 5 on hand' },
   { id: 'low', label: 'Low stock', hint: '1 to 5 left' },
   { id: 'out', label: 'Out of stock', hint: 'Nothing left to sell' },
@@ -100,7 +100,7 @@ export function ProductsPage() {
         <article className="stat">
           <span>Units on hand</span>
           <strong>{counts.onHand}</strong>
-          <em>Shoes left across every pair</em>
+          <em>Units left across the catalogue</em>
         </article>
       </section>
       {error ? <p className="banner">{error}</p> : null}
@@ -156,7 +156,7 @@ export function ProductsPage() {
                           {product.isNew ? ' · New' : ''}
                         </small>
                         <small>
-                          {product.colors.join(', ')} · UK {product.sizes.join(', ')}
+                          {product.colors.join(', ')} · {sizeSummary(product.category, product.sizes)}
                         </small>
                       </div>
                     </div>
@@ -252,14 +252,15 @@ function readImageFile(file: File): Promise<string> {
   })
 }
 
-type PhotoDraft = { url: string; position: string; urlText: string }
+type PhotoDraft = { url: string; position: string; color: string; urlText: string }
 
 function photosFrom(product: Product): PhotoDraft[] {
   const images = productPhotos(product)
-  if (images.length === 0) return [{ url: '', position: 'Front', urlText: '' }]
+  if (images.length === 0) return [{ url: '', position: 'Front', color: '', urlText: '' }]
   return images.map((image) => ({
     url: image.url,
     position: image.position || 'Front',
+    color: image.color ?? '',
     urlText: image.url.startsWith('data:') ? '' : image.url,
   }))
 }
@@ -271,6 +272,21 @@ function emptyCopy(filter: StockFilter, query: string) {
   if (filter === 'hidden') return 'No products are hidden.'
   if (filter === 'in') return 'No products are in stock.'
   return 'No products yet. Add one to start the catalogue.'
+}
+
+function defaultSizeText(category: string) {
+  if (category === 'Watches') return '40, 42'
+  if (category === 'Perfumes') return '50, 100'
+  if (category === 'Caps') return '56, 58'
+  return '6, 7, 8, 9, 10, 11'
+}
+
+function sizeFieldCopy(category: string) {
+  if (category === 'Watches') return { label: 'Case size (mm)', hint: 'Comma separated, for example 40, 42' }
+  if (category === 'Perfumes') return { label: 'Volume (ml)', hint: 'Comma separated, for example 50, 100' }
+  if (category === 'Caps') return { label: 'Head size (cm)', hint: 'Comma separated, for example 56, 58' }
+  if (category === 'Socks') return { label: 'UK sizes', hint: 'Comma separated shoe sizes, for example 6, 7, 8' }
+  return { label: 'UK sizes', hint: 'Comma separated, for example 6, 7, 8, 9, 10' }
 }
 
 function ProductForm({
@@ -310,13 +326,17 @@ function ProductForm({
       .filter(Boolean)
     const images = photos
       .filter((photo) => photo.url.trim())
-      .map((photo) => ({ url: photo.url.trim(), position: photo.position || 'Front' }))
+      .map((photo) => ({
+        url: photo.url.trim(),
+        position: photo.position || 'Front',
+        color: photo.color.trim(),
+      }))
     if (!draft.name.trim()) return setError('Enter a product name.')
     if (images.length === 0) return setError('Add at least one photo, by upload or URL.')
     if (!Number.isFinite(price) || price <= 0) return setError('Enter a valid price.')
     if (!Number.isInteger(stock) || stock < 0) return setError('Stock has to be a whole number. Use 0 for out of stock.')
     if (parsedColors.length === 0) return setError('Add at least one colour.')
-    if (parsedSizes.length === 0) return setError('Add at least one UK size.')
+    if (parsedSizes.length === 0) return setError('Add at least one size.')
     setSaving(true)
     const message = await onSave(
       {
@@ -374,7 +394,7 @@ function ProductForm({
     setPhotos((current) => {
       const used = new Set(current.map((photo) => photo.position))
       const position = photoPositions.find((item) => !used.has(item)) ?? 'Detail'
-      return [...current, { url: '', position, urlText: '' }]
+      return [...current, { url: '', position, color: '', urlText: '' }]
     })
   }
 
@@ -397,7 +417,16 @@ function ProductForm({
             <input value={draft.name} onChange={(event) => update('name', event.target.value)} />
           </Field>
           <Field label="Category">
-            <select value={draft.category} onChange={(event) => update('category', event.target.value)}>
+            <select
+              value={draft.category}
+              onChange={(event) => {
+                const next = event.target.value
+                setSizes((current) =>
+                  current === defaultSizeText(draft.category) ? defaultSizeText(next) : current,
+                )
+                update('category', next)
+              }}
+            >
               {categories.map((item) => (
                 <option key={item}>{item}</option>
               ))}
@@ -423,7 +452,7 @@ function ProductForm({
           <Field label="Colours">
             <input value={colors} onChange={(event) => setColors(event.target.value)} />
           </Field>
-          <Field label="UK sizes" wide>
+          <Field label={sizeFieldCopy(draft.category).label} hint={sizeFieldCopy(draft.category).hint} wide>
             <input value={sizes} onChange={(event) => setSizes(event.target.value)} />
           </Field>
           <div className="field span-2">
@@ -443,6 +472,29 @@ function ProductForm({
                       {photoPositions.includes(photo.position as (typeof photoPositions)[number]) ? null : (
                         <option>{photo.position}</option>
                       )}
+                    </select>
+                    <select
+                      aria-label={`Colour ${index + 1}`}
+                      value={photo.color}
+                      onChange={(event) => changePhoto(index, { color: event.target.value })}
+                    >
+                      <option value="">All colours</option>
+                      {colors
+                        .split(',')
+                        .map((item) => item.trim())
+                        .filter(Boolean)
+                        .map((item) => (
+                          <option key={item} value={item}>
+                            {item}
+                          </option>
+                        ))}
+                      {photo.color &&
+                      !colors
+                        .split(',')
+                        .map((item) => item.trim())
+                        .includes(photo.color) ? (
+                        <option value={photo.color}>{photo.color}</option>
+                      ) : null}
                     </select>
                     <div className="actions">
                       {index === 0 ? <span className="cover-tag">Cover</span> : null}
@@ -499,7 +551,9 @@ function ProductForm({
             <button type="button" className="btn small ghost" onClick={addPhoto}>
               Add another position
             </button>
-            <small>Add a photo for each view. The first one is the cover in the catalogue.</small>
+            <small>
+              Add a photo for each view. Assign a colour when that photo belongs to one colourway. The first photo is the cover.
+            </small>
           </div>
           <Field label="Description" wide>
             <textarea rows={3} value={draft.description} onChange={(event) => update('description', event.target.value)} />

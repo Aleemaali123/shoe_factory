@@ -22,7 +22,10 @@ class _ShopLauncherState extends State<ShopLauncher> {
   late Future<AppDependencies> _loading = AppDependencies.connect();
 
   void _retry() {
-    setState(() => _loading = AppDependencies.connect());
+    final next = AppDependencies.connect();
+    setState(() {
+      _loading = next;
+    });
   }
 
   @override

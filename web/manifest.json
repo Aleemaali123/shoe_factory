@@ -1,11 +1,11 @@
 {
-    "name": "shoe_factory",
-    "short_name": "shoe_factory",
+    "name": "ShoeFactory App",
+    "short_name": "ShoeFactory App",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#00C52B",
     "theme_color": "#00C52B",
-    "description": "A new Flutter project.",
+    "description": "ShoeFactory App",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

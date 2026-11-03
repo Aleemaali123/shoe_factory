@@ -1,12 +1,15 @@
 {
   "name": "shoe-factory",
   "private": true,
-  "description": "Shoe Factory monorepo: Flutter shop app and web admin.",
+  "description": "Shoe Factory monorepo: Flutter shop app, customer web app, and web admin.",
   "workspaces": [
-    "apps/admin"
+    "apps/admin",
+    "web_app"
   ],
   "scripts": {
     "admin": "npm run dev -w @shoe-factory/admin",
-    "admin:build": "npm run build -w @shoe-factory/admin"
+    "admin:build": "npm run build -w @shoe-factory/admin",
+    "web": "npm run dev -w @shoe-factory/web",
+    "web:build": "npm run build -w @shoe-factory/web"
   }
 }

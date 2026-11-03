@@ -21,10 +21,10 @@ class ShoppingHistoryEntry {
   String get title => line?.name ?? order.summary;
   String get imageUrl => line?.imageUrl ?? '';
 
-  String get detail {
+  String detailFor(String? category) {
     final line = this.line;
     if (line == null) return formatDate(order.placedAt);
-    return 'UK ${line.size} · ${line.color} · ${formatDate(order.placedAt)}';
+    return '${sizeOption(category, line.size)} · ${line.color} · ${formatDate(order.placedAt)}';
   }
 }
 
@@ -183,8 +183,10 @@ class ShoppingHistoryTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final line = entry.line;
     final productId = line?.productId;
-    final stillSold = productId != null &&
-        Shop.of(context).catalog.findById(productId) != null;
+    final product = productId == null
+        ? null
+        : Shop.of(context).catalog.findById(productId);
+    final stillSold = product != null;
     return InkWell(
       onTap: () => Navigator.push(
         context,
@@ -222,7 +224,7 @@ class ShoppingHistoryTile extends StatelessWidget {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    entry.detail,
+                    entry.detailFor(product?.category),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(color: AppColors.muted, fontSize: 12),
@@ -238,7 +240,7 @@ class ShoppingHistoryTile extends StatelessWidget {
                       OrderStatusChip(order: entry.order),
                     ],
                   ),
-                  if (showBuyAgain && stillSold) ...[
+                  if (showBuyAgain && productId != null && stillSold) ...[
                     const SizedBox(height: 4),
                     Align(
                       alignment: Alignment.centerLeft,

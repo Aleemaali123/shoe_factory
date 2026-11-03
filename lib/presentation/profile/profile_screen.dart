@@ -36,7 +36,7 @@ class ProfileScreen extends StatelessWidget {
       builder: (context, child) {
         final user = deps.session.user;
         final orders = deps.orders.orders;
-        final pairs = orders
+        final items = orders
             .where((order) => order.status != OrderStatus.cancelled)
             .fold<int>(0, (sum, order) => sum + order.itemCount);
         return AnnotatedRegion<SystemUiOverlayStyle>(
@@ -58,7 +58,7 @@ class ProfileScreen extends StatelessWidget {
                           _stat('Orders', '${orders.length}',
                               () => deps.shell.select(ShopTab.orders)),
                           const SizedBox(width: 8),
-                          _stat('Pairs', '$pairs',
+                          _stat('Items', '$items',
                               () => deps.shell.select(ShopTab.orders)),
                           const SizedBox(width: 8),
                           _stat('Wishlist', '${deps.wishlist.count}',

@@ -21,8 +21,8 @@ class WishlistScreen extends StatelessWidget {
           if (products.isEmpty) {
             return EmptyState(
               icon: Icons.favorite_border,
-              title: 'No saved pairs',
-              message: 'Tap the heart on a shoe to keep it here.',
+              title: 'Nothing saved yet',
+              message: 'Tap the heart on a product to keep it here.',
               actionLabel: 'Browse the shop',
               onAction: () {
                 deps.shell.select(ShopTab.shop);

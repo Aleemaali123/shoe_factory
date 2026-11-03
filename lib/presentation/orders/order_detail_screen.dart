@@ -187,7 +187,7 @@ class OrderDetailScreen extends StatelessWidget {
                                 style: const TextStyle(
                                     fontWeight: FontWeight.w800)),
                             Text(
-                                'UK ${line.size} · ${line.color} · ×${line.quantity}',
+                                '${sizeOption(deps.catalog.findById(line.productId)?.category, line.size)} · ${line.color} · ×${line.quantity}',
                                 style: const TextStyle(
                                     color: AppColors.muted, fontSize: 12)),
                           ],

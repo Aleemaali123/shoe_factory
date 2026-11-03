@@ -19,12 +19,16 @@ import {
   listCustomers,
   listNotices,
   listOrders,
+  previewOrderWhatsapp,
   restoreDesk,
   saveCustomer as putCustomer,
+  sendOrderWhatsapp,
   setOrderStatus as putOrderStatus,
   updateBranch,
   updateCoupon,
   updateNotice,
+  type WhatsappPreview,
+  type WhatsappSendResult,
 } from './api'
 import type { AdminData, Branch, Coupon, Customer, Notice, OrderStatus } from '../types'
 
@@ -45,6 +49,8 @@ type Store = {
   dismissFlash: () => void
   refresh: () => Promise<void>
   setOrderStatus: (id: string, status: OrderStatus) => Promise<string | null>
+  openWhatsapp: (id: string, includeTracking?: boolean) => Promise<{ error: string | null; preview?: WhatsappPreview }>
+  sendWhatsapp: (id: string, includeTracking?: boolean) => Promise<{ error: string | null; result?: WhatsappSendResult }>
   saveCustomer: (customer: Customer) => Promise<string | null>
   saveBranch: (branch: Branch, creating?: boolean) => Promise<string | null>
   deleteBranch: (id: string) => Promise<void>
@@ -115,6 +121,27 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           return null
         } catch (err) {
           return messageOf(err, 'Could not update that order.')
+        }
+      },
+      openWhatsapp: async (id, includeTracking = true) => {
+        try {
+          const preview = await previewOrderWhatsapp(id, includeTracking)
+          window.open(preview.whatsappComposeUrl, '_blank', 'noopener,noreferrer')
+          setError('')
+          setFlash(`WhatsApp opened for ${id}.`)
+          return { error: null, preview }
+        } catch (err) {
+          return { error: messageOf(err, 'Could not open WhatsApp for that order.') }
+        }
+      },
+      sendWhatsapp: async (id, includeTracking = true) => {
+        try {
+          const result = await sendOrderWhatsapp(id, includeTracking)
+          setError('')
+          setFlash(result.customerMessage || `WhatsApp sent for ${id}.`)
+          return { error: null, result }
+        } catch (err) {
+          return { error: messageOf(err, 'Could not send WhatsApp for that order.') }
         }
       },
       saveCustomer: async (customer) => {

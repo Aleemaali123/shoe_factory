@@ -1,7 +1,7 @@
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
+import type { OverviewMonth } from '../data/api'
 import { formatRupees } from '../lib/format'
-import { changeTone, formatChange, monthlyRevenue } from '../lib/revenue'
-import type { Order } from '../types'
+import { changeTone, formatChange } from '../lib/revenue'
 
 const size = 340
 const center = size / 2
@@ -22,8 +22,7 @@ function slicePath(inner: number, outer: number, start: number, end: number) {
   return `M ${x1} ${y1} A ${outer} ${outer} 0 ${large} 1 ${x2} ${y2} L ${x3} ${y3} A ${inner} ${inner} 0 ${large} 0 ${x4} ${y4} Z`
 }
 
-export function RevenueChart({ orders }: { orders: Order[] }) {
-  const months = useMemo(() => monthlyRevenue(orders), [orders])
+export function RevenueChart({ months }: { months: OverviewMonth[] }) {
   const [activeKey, setActiveKey] = useState<string | null>(null)
   const found = months.findIndex((month) => month.key === activeKey)
   const resolvedIndex = found >= 0 ? found : months.length - 1

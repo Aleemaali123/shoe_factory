@@ -23,7 +23,7 @@ const filters = [
 ]
 
 export function OrdersPage() {
-  const { data, setOrderStatus } = useStore()
+  const { data, setOrderStatus, openWhatsapp, sendWhatsapp } = useStore()
   const [params, setParams] = useSearchParams()
   const filter = params.get('view') ?? 'all'
   const query = params.get('q') ?? ''
@@ -102,7 +102,7 @@ export function OrdersPage() {
                 <td>
                   <strong>{order.id}</strong>
                   <small className="block">
-                    {order.lines.length} {order.lines.length === 1 ? 'pair' : 'lines'} · {fulfilmentLabel(order.fulfilment)}
+                    {order.lines.length} {order.lines.length === 1 ? 'item' : 'items'} · {fulfilmentLabel(order.fulfilment)}
                   </small>
                 </td>
                 <td>
@@ -126,6 +126,8 @@ export function OrdersPage() {
           branchName={data.branches.find((branch) => branch.id === selected.branchId)?.name ?? selected.branchId}
           onClose={() => patch('order', '')}
           onStatus={(status) => setOrderStatus(selected.id, status)}
+          onOpenWhatsapp={(includeTracking) => openWhatsapp(selected.id, includeTracking)}
+          onSendWhatsapp={(includeTracking) => sendWhatsapp(selected.id, includeTracking)}
         />
       ) : null}
     </>
@@ -137,22 +139,40 @@ function OrderDrawer({
   branchName,
   onClose,
   onStatus,
+  onOpenWhatsapp,
+  onSendWhatsapp,
 }: {
   order: Order
   branchName: string
   onClose: () => void
   onStatus: (status: OrderStatus) => Promise<string | null>
+  onOpenWhatsapp: (includeTracking: boolean) => Promise<{ error: string | null }>
+  onSendWhatsapp: (includeTracking: boolean) => Promise<{ error: string | null }>
 }) {
   const [error, setError] = useState('')
+  const [includeTracking, setIncludeTracking] = useState(true)
+  const [whatsappBusy, setWhatsappBusy] = useState(false)
   const advance = nextStatus(order.status)
 
   async function change(status: OrderStatus) {
     const problem = await onStatus(status)
     setError(problem ?? '')
   }
+
+  async function whatsapp(mode: 'open' | 'send') {
+    setWhatsappBusy(true)
+    setError('')
+    const result = mode === 'open'
+      ? await onOpenWhatsapp(includeTracking)
+      : await onSendWhatsapp(includeTracking)
+    setError(result.error ?? '')
+    setWhatsappBusy(false)
+  }
+
   const advanceLabel = nextStatusLabel(order)
   const steps = ['Confirmed', 'Preparing', order.fulfilment === 'pickup' ? 'Ready' : 'On the way', order.fulfilment === 'pickup' ? 'Collected' : 'Delivered']
   const stepIndex = ['confirmed', 'preparing', 'onTheWay', 'completed'].indexOf(order.status)
+  const paidOnline = order.paymentMethod === 'razorpay'
 
   return (
     <div className="scrim" onClick={onClose}>
@@ -228,9 +248,33 @@ function OrderDrawer({
           </div>
           <div>
             <dt>Payment</dt>
-            <dd>{paymentLabel(order.paymentMethod)}</dd>
+            <dd>{paymentLabel(order.paymentMethod)}{paidOnline ? ' · paid' : ''}</dd>
           </div>
         </dl>
+        <div className="whatsapp-box">
+          <strong>Message customer</strong>
+          <p className="muted">
+            {paidOnline
+              ? 'Payment was taken online. Message from admin WhatsApp 8075090160, or send via Twilio.'
+              : 'Message from admin WhatsApp 8075090160, or send via Twilio.'}
+          </p>
+          <label className="check">
+            <input
+              type="checkbox"
+              checked={includeTracking}
+              onChange={(event) => setIncludeTracking(event.target.checked)}
+            />
+            Include tracking link
+          </label>
+          <div className="actions tight">
+            <button type="button" className="btn ghost" disabled={whatsappBusy} onClick={() => void whatsapp('open')}>
+              Open WhatsApp
+            </button>
+            <button type="button" className="btn ghost" disabled={whatsappBusy} onClick={() => void whatsapp('send')}>
+              Send via Twilio
+            </button>
+          </div>
+        </div>
         <FormError message={error} />
         <div className="actions">
           {advance && advanceLabel ? (

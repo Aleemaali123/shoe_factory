@@ -376,6 +376,45 @@ select, .field input, .field textarea {
   max-width: min(560px, calc(100% - 24px));
 }
 .toast button { border: 0; background: transparent; color: var(--green); font-weight: 800; }
+
+.pay-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  place-items: end center;
+  padding: 16px;
+  background: rgba(21, 23, 21, 0.45);
+}
+.pay-modal-card {
+  width: min(420px, 100%);
+  background: white;
+  border-radius: 20px;
+  padding: 22px 18px 16px;
+  box-shadow: var(--shadow);
+  display: grid;
+  gap: 10px;
+}
+.pay-modal-card h3 { font-size: 1.2rem; }
+.pay-modal-amount {
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: var(--deep);
+}
+.pay-modal-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 8px;
+}
+.btn.ghost {
+  background: white;
+  color: var(--ink);
+  border: 1px solid var(--line);
+}
+@media (min-width: 720px) {
+  .pay-modal { place-items: center; }
+}
 .banner {
   background: #fff6df;
   border: 1px solid #f0dfaa;

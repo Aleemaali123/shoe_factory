@@ -34,7 +34,7 @@ class _ShoeFactoryAppState extends State<ShoeFactoryApp> {
     return ShopProviders(
       dependencies: widget.dependencies,
       child: MaterialApp(
-        title: 'Shoe Factory',
+        title: 'ShoeFactory App',
         debugShowCheckedModeBanner: false,
         theme: AppTheme.light,
         home: _splash ? const SplashView() : const HomeShell(),

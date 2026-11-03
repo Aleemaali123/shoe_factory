@@ -26,6 +26,47 @@ export type AdminProfile = {
   name: string
   email: string
   phone: string
+  username: string
+}
+
+export type OverviewMonth = {
+  key: string
+  label: string
+  full: string
+  revenue: number
+  orders: number
+  change: number | null
+}
+
+export type OverviewProduct = {
+  id: string
+  name: string
+  stock: number
+  state: 'low' | 'out'
+}
+
+export type OverviewOrder = {
+  id: string
+  placedAt: string
+  contactName: string
+  status: OrderStatus
+  fulfilment: Order['fulfilment']
+  total: number
+}
+
+export type Overview = {
+  bookedSales: number
+  fulfilledSales: number
+  fulfilledCount: number
+  openOrders: number
+  stockAlerts: number
+  attention: OverviewProduct[]
+  recent: OverviewOrder[]
+  months: OverviewMonth[]
+}
+
+export function getOverview() {
+  return request<Overview>('/api/admin/overview')
 }
 
 export function listOrders() {
@@ -36,6 +77,33 @@ export function setOrderStatus(id: string, status: OrderStatus) {
   return request<Order>(`/api/admin/orders/${encodeURIComponent(id)}/status`, {
     method: 'PATCH',
     body: JSON.stringify({ status }),
+  })
+}
+
+export type WhatsappPreview = {
+  orderId: string
+  phone: string
+  text: string
+  whatsappComposeUrl: string
+  trackingUrl: string | null
+}
+
+export type WhatsappSendResult = {
+  orderId: string
+  customerMessage: string
+  trackingUrl: string | null
+  whatsappComposeUrl: string | null
+}
+
+export function previewOrderWhatsapp(id: string, includeTracking = true) {
+  const tracking = includeTracking ? '' : '?tracking=0'
+  return request<WhatsappPreview>(`/api/admin/orders/${encodeURIComponent(id)}/whatsapp${tracking}`)
+}
+
+export function sendOrderWhatsapp(id: string, includeTracking = true) {
+  return request<WhatsappSendResult>(`/api/admin/orders/${encodeURIComponent(id)}/whatsapp`, {
+    method: 'POST',
+    body: JSON.stringify({ includeTracking }),
   })
 }
 
@@ -133,16 +201,16 @@ export function updateAdminProfile(profile: AdminProfile) {
   })
 }
 
-export function requestAdminOtp(phone: string) {
-  return request<{ code: string }>('/api/admin/otp/request', {
+export function loginAdmin(username: string, password: string) {
+  return request<{ profile: AdminProfile }>('/api/admin/login', {
     method: 'POST',
-    body: JSON.stringify({ phone }),
+    body: JSON.stringify({ username, password }),
   })
 }
 
-export function verifyAdminOtp(phone: string, code: string) {
-  return request<{ profile: AdminProfile }>('/api/admin/otp/verify', {
-    method: 'POST',
-    body: JSON.stringify({ phone, code }),
+export function updateAdminCredentials(input: { currentPassword: string; username: string; password?: string }) {
+  return request<AdminProfile>('/api/admin/credentials', {
+    method: 'PATCH',
+    body: JSON.stringify(input),
   })
 }

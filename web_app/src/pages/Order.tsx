@@ -52,11 +52,12 @@ export function OrderPage() {
         {placed ? (
           <div className="banner ok">
             <p className="ok" style={{ margin: 0 }}>
-              {paidJustNow ? 'Payment received. ' : ''}Order placed. {placedMessage || orderEta(order)}
+              {paidJustNow ? 'Payment received. ' : ''}Your order is confirmed.
+              {placedMessage ? ` ${placedMessage}` : ` ${orderEta(order)}.`}
             </p>
             {trackingUrl ? (
               <p style={{ margin: '8px 0 0' }}>
-                Tracking link:{' '}
+                Track anytime:{' '}
                 <a href={trackingUrl}>{trackingUrl}</a>
               </p>
             ) : null}

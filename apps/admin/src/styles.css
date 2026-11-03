@@ -198,7 +198,7 @@ tr:last-child td { border-bottom: 0; }
 form .actions { justify-content: flex-end; margin-top: 8px; }
 .photo-list { display: flex; flex-direction: column; gap: 10px; }
 .photo-card { border: 1px solid var(--line); border-radius: 14px; padding: 10px; }
-.photo-card > header { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin: 0 0 8px; }
+.photo-card > header { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin: 0 0 8px; flex-wrap: wrap; }
 .photo-card > header select { width: auto; min-width: 120px; }
 .photo-card > header .actions { margin: 0; }
 .photo-row { display: flex; gap: 12px; align-items: flex-start; }
@@ -222,6 +222,24 @@ form .actions { justify-content: flex-end; margin-top: 8px; }
 .money dt, .facts dt { color: var(--muted); }
 .money dd, .facts dd { margin: 0; text-align: right; font-weight: 700; }
 .money .total { border-top: 1px solid var(--line); font-size: 18px; }
+.whatsapp-box {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 12px 14px;
+  margin: 12px 0 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.whatsapp-box .muted { margin: 0; font-size: 13px; }
+.whatsapp-box .check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  font-size: 14px;
+}
+.actions.tight { justify-content: flex-start; margin-top: 4px; flex-wrap: wrap; }
 .cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
 .branch p, .notice p { margin-top: 6px; }
 .branch .actions { margin-top: 14px; justify-content: flex-start; }

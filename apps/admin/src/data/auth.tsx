@@ -1,5 +1,11 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
-import { getAdminProfile, requestAdminOtp, updateAdminProfile, verifyAdminOtp, type AdminProfile } from './api'
+import {
+  getAdminProfile,
+  loginAdmin,
+  updateAdminCredentials,
+  updateAdminProfile,
+  type AdminProfile,
+} from './api'
 
 const SESSION_KEY = 'sf-admin-session'
 
@@ -8,19 +14,25 @@ export type { AdminProfile }
 export const DEFAULT_ADMIN: AdminProfile = {
   name: 'Factory Admin',
   email: 'admin@shoefactory.shop',
-  phone: '9876501234',
+  phone: '8075090160',
+  username: 'Malik@shoefactory',
 }
 
-export type OtpRequest = { ok: boolean; code?: string; error?: string }
+type Credentials = {
+  currentPassword: string
+  username: string
+  password?: string
+}
 
 type Auth = {
   name: string | null
   email: string | null
   phone: string | null
+  username: string | null
   profile: AdminProfile
-  requestOtp: (phone: string) => Promise<OtpRequest>
-  verifyOtp: (phone: string, code: string) => Promise<string | null>
+  signIn: (username: string, password: string) => Promise<string | null>
   updateProfile: (next: AdminProfile) => Promise<string | null>
+  updateCredentials: (next: Credentials) => Promise<string | null>
   signOut: () => void
 }
 
@@ -30,13 +42,21 @@ function readSession() {
   return sessionStorage.getItem(SESSION_KEY) === '1'
 }
 
+function withUsername(profile: Partial<AdminProfile>): AdminProfile {
+  return {
+    ...DEFAULT_ADMIN,
+    ...profile,
+    username: profile.username?.trim() || DEFAULT_ADMIN.username,
+  }
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<AdminProfile>(DEFAULT_ADMIN)
   const [signedIn, setSignedIn] = useState(readSession)
 
   useEffect(() => {
     void getAdminProfile()
-      .then(setProfile)
+      .then((next) => setProfile(withUsername(next)))
       .catch(() => setProfile(DEFAULT_ADMIN))
   }, [])
 
@@ -44,19 +64,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     name: signedIn ? profile.name : null,
     email: signedIn ? profile.email : null,
     phone: signedIn ? profile.phone : null,
+    username: signedIn ? profile.username : null,
     profile,
-    requestOtp: async (raw) => {
+    signIn: async (username, password) => {
       try {
-        const result = await requestAdminOtp(raw)
-        return { ok: true, code: result.code }
-      } catch (err) {
-        return { ok: false, error: err instanceof Error ? err.message : 'Could not send a code.' }
-      }
-    },
-    verifyOtp: async (raw, code) => {
-      try {
-        const result = await verifyAdminOtp(raw, code)
-        setProfile(result.profile)
+        const result = await loginAdmin(username, password)
+        setProfile(withUsername(result.profile))
         sessionStorage.setItem(SESSION_KEY, '1')
         setSignedIn(true)
         return null
@@ -67,10 +80,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     updateProfile: async (next) => {
       try {
         const saved = await updateAdminProfile(next)
-        setProfile(saved)
+        setProfile(withUsername(saved))
         return null
       } catch (err) {
         return err instanceof Error ? err.message : 'Could not save your profile.'
+      }
+    },
+    updateCredentials: async (next) => {
+      try {
+        const saved = await updateAdminCredentials(next)
+        setProfile(withUsername(saved))
+        return null
+      } catch (err) {
+        return err instanceof Error ? err.message : 'Could not change the sign-in details.'
       }
     },
     signOut: () => {

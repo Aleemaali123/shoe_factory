@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-
 import '../../app/shop_context.dart';
 import '../../core/motion/motion.dart';
 import '../../core/theme/app_theme.dart';
@@ -37,7 +36,7 @@ class OrdersScreen extends StatelessWidget {
                         style: TextStyle(
                             fontSize: 25, fontWeight: FontWeight.w900)),
                     const SizedBox(height: 6),
-                    const Text('Track purchases and buy a pair again',
+                    const Text('Track purchases and buy again',
                         style: TextStyle(color: AppColors.muted)),
                     const SizedBox(height: 18),
                     for (var i = 0; i < orders.length; i++)
@@ -107,7 +106,7 @@ class _OrderCard extends StatelessWidget {
                           Text(
                             lines.isEmpty
                                 ? formatDate(order.placedAt)
-                                : 'UK ${lines.first.size} · ${lines.first.color}',
+                                : '${sizeOption(Shop.of(context).catalog.findById(lines.first.productId)?.category, lines.first.size)} · ${lines.first.color}',
                             style: const TextStyle(
                                 color: AppColors.muted, fontSize: 12),
                           ),

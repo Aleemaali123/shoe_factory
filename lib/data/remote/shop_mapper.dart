@@ -11,6 +11,17 @@ Product productFromJson(Map<String, dynamic> json) {
     rating: (json['rating'] as num).toDouble(),
     reviewCount: (json['reviewCount'] as num).toInt(),
     imageUrls: [for (final url in json['imageUrls'] as List) url as String],
+    photos: [
+      for (final image in json['images'] as List? ?? const [])
+        if (image is Map && ((image['url'] as String?) ?? '').isNotEmpty)
+          ProductPhoto(
+            url: image['url'] as String,
+            label: ((image['position'] as String?) ?? '').trim().isNotEmpty
+                ? image['position'] as String
+                : 'Front',
+            color: (image['color'] as String?) ?? '',
+          ),
+    ],
     description: json['description'] as String,
     colors: [for (final color in json['colors'] as List) color as String],
     sizes: [for (final size in json['sizes'] as List) (size as num).toInt()],
@@ -74,6 +85,8 @@ ShopOrder orderFromJson(Map<String, dynamic> json) {
     contactPhone: json['contactPhone'] as String,
     couponCode: json['couponCode'] as String?,
     paymentReference: json['paymentReference'] as String?,
+    customerMessage: json['customerMessage'] as String?,
+    trackingUrl: json['trackingUrl'] as String?,
   );
 }
 

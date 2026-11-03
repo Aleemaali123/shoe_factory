@@ -45,8 +45,8 @@ class CartScreen extends StatelessWidget {
                         icon: Icons.shopping_bag_outlined,
                         title: 'Your cart is empty',
                         message:
-                            'Find a pair you love and it will show up here.',
-                        actionLabel: 'Explore shoes',
+                            'Find something you love and it will show up here.',
+                        actionLabel: 'Explore the shop',
                         onAction: () => deps.shell.select(ShopTab.shop),
                       )
                     : ListView.separated(
@@ -87,7 +87,7 @@ class CartScreen extends StatelessWidget {
                                                 fontWeight: FontWeight.w900)),
                                         const SizedBox(height: 4),
                                         Text(
-                                            'UK ${item.size}  ·  ${item.color}',
+                                            '${sizeOption(product?.category, item.size)}  ·  ${item.color}',
                                             style: const TextStyle(
                                                 color: AppColors.muted,
                                                 fontSize: 12)),

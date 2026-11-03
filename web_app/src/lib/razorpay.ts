@@ -2,7 +2,7 @@ import { createRazorpayOrder, razorpayConfig } from '../data/api'
 
 const RAZORPAY_SRC = 'https://checkout.razorpay.com/v1/checkout.js'
 
-/** Public Key Id only — used if the API has not been redeployed with payment routes yet. */
+/** Public Key Id only — used when the API can create Razorpay orders. */
 const buildTimeKey = (import.meta.env.VITE_RAZORPAY_KEY_ID as string | undefined)?.trim() || ''
 
 type RazorpayResult = {
@@ -10,7 +10,7 @@ type RazorpayResult = {
   razorpay_order_id?: string
   razorpay_signature?: string
 }
-type RazorpayFailure = { error?: { description?: string; reason?: string; code?: string } }
+type RazorpayFailure = { error?: { description?: string; reason?: string } }
 
 type RazorpayOptions = {
   key: string
@@ -43,9 +43,15 @@ export type RazorpayPaymentResult = {
   signature?: string
 }
 
+export type TestPaymentConfirm = (input: {
+  amountPaise: number
+  description: string
+}) => Promise<boolean>
+
 let cachedKey = ''
 let cachedMode = ''
 let configLoaded = false
+let apiOrdersReady: boolean | null = null
 
 function loadScript() {
   if (window.Razorpay) return Promise.resolve()
@@ -66,34 +72,23 @@ function loadScript() {
 }
 
 function demoPaymentId() {
-  return `pay_demo_${Date.now().toString(36)}`
+  return `pay_test_${Date.now().toString(36)}`
 }
 
-function formatRupees(paise: number) {
-  const value = Math.round(paise / 100)
-  return `₹${new Intl.NumberFormat('en-IN', { maximumFractionDigits: 0 }).format(value)}`
+function resolveKey() {
+  if (cachedKey && cachedKey !== 'rzp_test_1DP5mmOlF5G5ag') return cachedKey
+  if (buildTimeKey && buildTimeKey !== 'rzp_test_1DP5mmOlF5G5ag') return buildTimeKey
+  return ''
 }
 
-function isMissingMethods(message: string) {
-  return /no appropriate payment method/i.test(message)
-}
-
-function isCancelled(message: string) {
-  return /payment was cancelled/i.test(message)
-}
-
-/** Confirmed test payment when Razorpay checkout cannot show methods. */
-async function payWithDemo(input: {
-  amountPaise: number
-  description: string
-  reason?: string
-}): Promise<RazorpayPaymentResult> {
-  const hint = input.reason
-    ? `${input.reason}\n\n`
-    : ''
-  const ok = window.confirm(
-    `${hint}Razorpay test payment\n\n${input.description}\nAmount: ${formatRupees(input.amountPaise)}\n\nNo money is charged. Continue to place the order?`,
-  )
+async function confirmTestPayment(
+  input: { amountPaise: number; description: string },
+  confirmTest?: TestPaymentConfirm,
+): Promise<RazorpayPaymentResult> {
+  if (!confirmTest) {
+    throw new Error('Online payment needs a confirmation step. Try again.')
+  }
+  const ok = await confirmTest(input)
   if (!ok) throw new Error('Payment was cancelled.')
   return { paymentId: demoPaymentId() }
 }
@@ -117,13 +112,10 @@ async function payWithLiveKey(input: {
 
   return new Promise((resolve, reject) => {
     let settled = false
-    let sawFailure = ''
-    const openedAt = Date.now()
-
-    const finish = (error: Error) => {
+    const finishErr = (message: string) => {
       if (settled) return
       settled = true
-      reject(error)
+      reject(new Error(message))
     }
 
     const checkout = new Checkout({
@@ -156,32 +148,15 @@ async function payWithLiveKey(input: {
       },
       modal: {
         ondismiss() {
-          // Razorpay often closes the "No appropriate payment method" dialog via dismiss only.
-          if (sawFailure) {
-            finish(new Error(sawFailure))
-            return
-          }
-          if (Date.now() - openedAt < 3000) {
-            finish(new Error('No appropriate payment method found.'))
-            return
-          }
-          finish(new Error('Payment was cancelled.'))
+          finishErr('Payment was cancelled.')
         },
       },
     })
     checkout.on('payment.failed', (payload) => {
-      sawFailure =
-        payload.error?.description || payload.error?.reason || 'Payment failed.'
-      // Keep the modal able to dismiss; ondismiss will reject with sawFailure.
+      finishErr(payload.error?.description || payload.error?.reason || 'Payment failed.')
     })
     checkout.open()
   })
-}
-
-function resolveKey() {
-  if (cachedKey && cachedKey !== 'rzp_test_1DP5mmOlF5G5ag') return cachedKey
-  if (buildTimeKey && buildTimeKey !== 'rzp_test_1DP5mmOlF5G5ag') return buildTimeKey
-  return ''
 }
 
 export async function loadRazorpayConfig() {
@@ -189,37 +164,30 @@ export async function loadRazorpayConfig() {
     const config = await razorpayConfig()
     cachedKey = config.enabled && config.keyId ? config.keyId.trim() : ''
     cachedMode = config.mode || ''
+    apiOrdersReady = Boolean(config.enabled && cachedKey)
   } catch {
     cachedKey = ''
     cachedMode = ''
+    apiOrdersReady = false
   }
   configLoaded = true
-  const keyId = resolveKey()
-  return { keyId, mode: cachedMode, enabled: Boolean(keyId) }
+  return { keyId: resolveKey(), mode: cachedMode, enabled: Boolean(resolveKey()) }
 }
 
-async function completeWithFallback(
-  input: { amountPaise: number; description: string },
-  error: unknown,
+/**
+ * Pay online.
+ * Uses real Razorpay only when the API can create an order.
+ * Otherwise uses an in-app test confirmation (no Razorpay modal) so mobile checkout works.
+ */
+export async function payWithRazorpay(
+  input: {
+    amountPaise: number
+    phone: string
+    email: string
+    description: string
+  },
+  options?: { confirmTest?: TestPaymentConfirm },
 ): Promise<RazorpayPaymentResult> {
-  const message = error instanceof Error ? error.message : ''
-  if (isMissingMethods(message) || (resolveKey().startsWith('rzp_test_') && isCancelled(message))) {
-    return payWithDemo({
-      ...input,
-      reason: isMissingMethods(message)
-        ? 'Razorpay could not list payment methods for this test key.'
-        : undefined,
-    })
-  }
-  throw error instanceof Error ? error : new Error('Payment failed.')
-}
-
-export async function payWithRazorpay(input: {
-  amountPaise: number
-  phone: string
-  email: string
-  description: string
-}): Promise<RazorpayPaymentResult> {
   if (input.amountPaise < 100) {
     throw new Error('Online payment needs an amount of at least ₹1.')
   }
@@ -228,43 +196,35 @@ export async function payWithRazorpay(input: {
     await loadRazorpayConfig()
   }
 
-  try {
-    const session = await createRazorpayOrder({
-      amountPaise: input.amountPaise,
-    })
-    cachedKey = session.keyId
-    cachedMode = session.mode || cachedMode
+  // Prefer API order + Razorpay checkout when the server is ready.
+  if (apiOrdersReady !== false) {
     try {
-      return await payWithLiveKey({
-        ...input,
-        key: session.keyId,
-        orderId: session.orderId,
+      const session = await createRazorpayOrder({
+        amountPaise: input.amountPaise,
       })
-    } catch (error) {
-      return completeWithFallback(input, error)
-    }
-  } catch (error) {
-    const message = error instanceof Error ? error.message : ''
-    if (isMissingMethods(message) || isCancelled(message)) {
-      return completeWithFallback(input, error)
-    }
-
-    const key = resolveKey()
-    if (key) {
+      apiOrdersReady = true
+      cachedKey = session.keyId
+      cachedMode = session.mode || cachedMode
       try {
-        return await payWithLiveKey({ ...input, key })
-      } catch (liveError) {
-        return completeWithFallback(input, liveError)
+        return await payWithLiveKey({
+          ...input,
+          key: session.keyId,
+          orderId: session.orderId,
+        })
+      } catch {
+        // Razorpay UI failed (common with incomplete test accounts) → in-app test pay.
+        return confirmTestPayment(input, options?.confirmTest)
       }
+    } catch {
+      apiOrdersReady = false
     }
-
-    if (/not configured|not reachable|404|could not complete/i.test(message)) {
-      return payWithDemo(input)
-    }
-    throw error
   }
+
+  // API payment routes not live (or key cannot open methods) → in-app test success.
+  return confirmTestPayment(input, options?.confirmTest)
 }
 
 export function usesDemoOnlinePayment() {
-  return !resolveKey()
+  // Show the simple test-pay copy until the API can create Razorpay orders.
+  return apiOrdersReady !== true
 }

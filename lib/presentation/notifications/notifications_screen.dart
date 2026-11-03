@@ -249,7 +249,7 @@ String? _hint(ShopNotice notice) {
     case 'offer':
       return notice.targetId.isEmpty ? null : 'Apply ${notice.targetId}';
     case 'product':
-      return notice.targetId.isEmpty ? null : 'Open this pair';
+      return notice.targetId.isEmpty ? null : 'Open this product';
     default:
       return null;
   }

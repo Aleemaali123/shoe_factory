@@ -3,39 +3,28 @@ import { Navigate } from 'react-router-dom'
 import { useAuth } from '../data/auth'
 
 export function LoginPage() {
-  const { name, profile, requestOtp, verifyOtp } = useAuth()
-  const [phone, setPhone] = useState(profile.phone)
-  const [code, setCode] = useState('')
-  const [issued, setIssued] = useState('')
+  const { name, profile, signIn } = useAuth()
+  const [username, setUsername] = useState(profile.username)
+  const [password, setPassword] = useState('')
   const [error, setError] = useState('')
+  const [busy, setBusy] = useState(false)
 
   useEffect(() => {
-    document.title = 'Sign in · Shoe Factory'
+    document.title = 'Sign in · ShoeFactory Admin'
   }, [])
 
   useEffect(() => {
-    if (!issued) setPhone(profile.phone)
-  }, [profile.phone, issued])
+    setUsername((current) => current || profile.username)
+  }, [profile.username])
 
   if (name) return <Navigate to="/" replace />
 
-  async function sendCode(event: FormEvent) {
+  async function onSubmit(event: FormEvent) {
     event.preventDefault()
-    const result = await requestOtp(phone)
-    if (!result.ok || !result.code) {
-      setIssued('')
-      setError(result.error ?? 'Could not send a code.')
-      return
-    }
-    setIssued(result.code)
-    setCode('')
-    setError('')
-  }
-
-  async function confirmCode(event: FormEvent) {
-    event.preventDefault()
-    const message = await verifyOtp(phone, code)
+    setBusy(true)
+    const message = await signIn(username, password)
     setError(message ?? '')
+    setBusy(false)
   }
 
   return (
@@ -56,57 +45,32 @@ export function LoginPage() {
         </ul>
       </aside>
       <section className="login-panel">
-        <form className="login-card" onSubmit={issued ? confirmCode : sendCode}>
+        <form className="login-card" onSubmit={onSubmit}>
           <h2>Sign in</h2>
-          <p className="lede">Use the admin mobile number stored on the shop API.</p>
+          <p className="lede">Use the admin username and password stored on the shop API.</p>
           <label className="field">
-            <span>Mobile number</span>
+            <span>Username</span>
             <input
-              value={phone}
-              onChange={(event) => setPhone(event.target.value.replace(/\D/g, '').slice(0, 10))}
-              inputMode="numeric"
-              autoComplete="tel"
-              disabled={Boolean(issued)}
-              placeholder="10-digit mobile"
+              value={username}
+              onChange={(event) => setUsername(event.target.value)}
+              autoComplete="username"
+              placeholder="Username"
             />
           </label>
-          {issued ? (
-            <>
-              <label className="field">
-                <span>6-digit code</span>
-                <input
-                  className="otp-input"
-                  value={code}
-                  onChange={(event) => setCode(event.target.value.replace(/\D/g, '').slice(0, 6))}
-                  inputMode="numeric"
-                  autoComplete="one-time-code"
-                  placeholder="••••••"
-                />
-              </label>
-              <p className="demo-code">
-                Demo code <strong>{issued}</strong>
-                <span>Expires in 5 minutes. No SMS is sent.</span>
-              </p>
-            </>
-          ) : null}
+          <label className="field">
+            <span>Password</span>
+            <input
+              type="password"
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              autoComplete="current-password"
+              placeholder="Password"
+            />
+          </label>
           {error ? <p className="error">{error}</p> : null}
-          <button className="btn primary" type="submit">
-            {issued ? 'Enter the desk' : 'Send code'}
+          <button className="btn primary" type="submit" disabled={busy}>
+            {busy ? 'Signing in' : 'Enter the desk'}
           </button>
-          {issued ? (
-            <button
-              className="linkish"
-              type="button"
-              onClick={() => {
-                setIssued('')
-                setCode('')
-                setError('')
-              }}
-            >
-              Use a different number
-            </button>
-          ) : null}
-          <p className="hint">Admin mobile {profile.phone}</p>
         </form>
       </section>
     </div>

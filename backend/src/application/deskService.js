@@ -137,7 +137,7 @@ export function createDeskService(store, notifier = null) {
       const result = await notifier.sendWhatsapp(order, { includeTracking: includeTracking !== false });
       return {
         orderId: order.id,
-        customerMessage: result.customerMessage,
+        customerMessage: result.deskMessage || result.customerMessage,
         trackingUrl: result.trackingUrl,
         whatsappComposeUrl: result.whatsappComposeUrl,
       };

@@ -20,6 +20,18 @@ class ProductReview {
   final String comment;
 }
 
+class ProductPhoto {
+  const ProductPhoto({
+    required this.url,
+    this.label = 'Front',
+    this.color = '',
+  });
+
+  final String url;
+  final String label;
+  final String color;
+}
+
 class Product {
   const Product({
     required this.id,
@@ -35,6 +47,7 @@ class Product {
     required this.sizes,
     required this.stock,
     required this.reviews,
+    this.photos = const [],
     this.badge,
     this.isNew = false,
   });
@@ -47,6 +60,7 @@ class Product {
   final double rating;
   final int reviewCount;
   final List<String> imageUrls;
+  final List<ProductPhoto> photos;
   final String description;
   final String? badge;
   final List<String> colors;
@@ -55,12 +69,110 @@ class Product {
   final bool isNew;
   final List<ProductReview> reviews;
 
-  String get imageUrl => imageUrls.first;
+  String get imageUrl {
+    if (imageUrls.isNotEmpty) return imageUrls.first;
+    if (photos.isNotEmpty) return photos.first.url;
+    return '';
+  }
+
+  List<ProductPhoto> get gallery {
+    if (photos.isNotEmpty) return photos;
+    return [
+      for (var i = 0; i < imageUrls.length; i++)
+        ProductPhoto(url: imageUrls[i], label: i == 0 ? 'Front' : 'Detail'),
+    ];
+  }
+
+  /// Photos for the selected colour. Shared photos are reused, then extra
+  /// framings are derived so the gallery has more than one view.
+  List<ProductPhoto> galleryFor(String color) {
+    final all = gallery;
+    final named = all.where((photo) => photo.color.isNotEmpty).toList();
+    List<ProductPhoto> shots;
+    if (named.isEmpty) {
+      shots = all;
+    } else {
+      final match = all
+          .where((photo) => photo.color.toLowerCase() == color.toLowerCase())
+          .toList();
+      if (match.isNotEmpty) {
+        final shared = all.where((photo) => photo.color.isEmpty).toList();
+        shots = [...match, ...shared];
+      } else {
+        final shared = all.where((photo) => photo.color.isEmpty).toList();
+        final primary = colors.isEmpty
+            ? const <ProductPhoto>[]
+            : all
+                .where((photo) =>
+                    photo.color.toLowerCase() == colors.first.toLowerCase())
+                .toList();
+        shots = shared.isNotEmpty
+            ? shared
+            : (primary.isNotEmpty ? primary : all);
+      }
+    }
+    return _withAngles(shots);
+  }
+
+  /// True when this colour has no photos of its own, so the shared shots
+  /// should be recoloured to match the swatch.
+  bool recolorGallery(String color) {
+    if (color.isEmpty || colors.isEmpty || color == colors.first) return false;
+    final own = photos
+        .where((photo) => photo.color.toLowerCase() == color.toLowerCase())
+        .toList();
+    if (own.isEmpty) return true;
+    final primary = photos
+        .where((photo) => photo.color.toLowerCase() == colors.first.toLowerCase())
+        .toList();
+    if (primary.isEmpty || own.length != primary.length) return false;
+    for (var i = 0; i < own.length; i++) {
+      if (own[i].url != primary[i].url) return false;
+    }
+    return true;
+  }
+
+  String imageFor(String color) {
+    final shots = galleryFor(color);
+    if (shots.isEmpty) return imageUrl;
+    return shots.first.url;
+  }
 
   int get discountPercent =>
       oldPrice <= price ? 0 : (((oldPrice - price) / oldPrice) * 100).round();
 
   bool get lowStock => stock > 0 && stock <= 5;
+
+  static List<ProductPhoto> _withAngles(List<ProductPhoto> shots) {
+    if (shots.isEmpty || shots.length >= 4) return shots;
+    const labels = ['Front', 'Angle', 'Side', 'Detail'];
+    const crops = ['entropy', 'top', 'edges', 'bottom'];
+    final next = [...shots];
+    for (final crop in crops) {
+      if (next.length >= 4) break;
+      final url = _unsplashCrop(shots.first.url, crop);
+      if (url == shots.first.url) continue;
+      if (next.any((photo) => photo.url == url)) continue;
+      next.add(ProductPhoto(
+        url: url,
+        label: labels[next.length.clamp(0, labels.length - 1)],
+        color: shots.first.color,
+      ));
+    }
+    return next;
+  }
+
+  static String _unsplashCrop(String url, String crop) {
+    final uri = Uri.tryParse(url);
+    if (uri == null || !uri.host.contains('unsplash.com')) return url;
+    final params = Map<String, String>.from(uri.queryParameters);
+    params['fit'] = 'crop';
+    params['w'] = '900';
+    params['h'] = '900';
+    params['crop'] = crop;
+    params['q'] = '80';
+    return uri.replace(queryParameters: params).toString();
+  }
 }
 
 class CartItem {
@@ -139,6 +251,8 @@ class ShopOrder {
     required this.contactPhone,
     this.couponCode,
     this.paymentReference,
+    this.customerMessage,
+    this.trackingUrl,
   });
 
   final String id;
@@ -156,6 +270,12 @@ class ShopOrder {
   final String contactPhone;
   final String? couponCode;
   final String? paymentReference;
+  final String? customerMessage;
+  final String? trackingUrl;
+
+  bool get paidOnline =>
+      paymentMethod == 'razorpay' &&
+      (paymentReference?.trim().isNotEmpty ?? false);
 
   bool get isPickup => fulfilment == 'pickup';
   bool get canCancel =>
@@ -208,7 +328,7 @@ class ShopOrder {
     }
   }
 
-  ShopOrder copyWith({OrderStatus? status}) {
+  ShopOrder copyWith({OrderStatus? status, String? customerMessage, String? trackingUrl}) {
     return ShopOrder(
       id: id,
       placedAt: placedAt,
@@ -225,6 +345,8 @@ class ShopOrder {
       contactPhone: contactPhone,
       couponCode: couponCode,
       paymentReference: paymentReference,
+      customerMessage: customerMessage ?? this.customerMessage,
+      trackingUrl: trackingUrl ?? this.trackingUrl,
     );
   }
 }
